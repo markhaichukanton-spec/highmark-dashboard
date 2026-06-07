@@ -71,13 +71,15 @@ Add as **Filter controls** (Insert → Filter control). Each linked to all chart
 | Date range | `date` | Date range control — enable "Comparison date range" |
 | Source | `source` | Dropdown |
 | GEO | `country` | Dropdown |
-| Device | `device_platform` | Dropdown |
-| Publisher | `publisher_platform` | Dropdown |
-| Position | `platform_position` | Dropdown |
 | Campaign Type | `campaign_objective` | Dropdown |
 | Campaign | `campaign_name` | Dropdown |
 | Adset | `adset_name` | Dropdown |
 | Ad | `ad_name` | Dropdown |
+
+> **Device / Placement filters** — не добавляются в MVP. Meta API блокирует сочетание
+> `country` + любой второй breakdown при наличии полей `actions`/`action_values` (покупки, выручка).
+> Phase 2: отдельный pull через async AdReportRun + отдельная таблица `raw_ad_placements`.
+> Тогда в LS появится blended source с Publisher/Position фильтрами.
 
 ---
 

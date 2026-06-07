@@ -47,9 +47,6 @@ SCHEMA = [
     {"name": "source",             "type": "STRING"},
     {"name": "account_id",         "type": "STRING"},
     {"name": "country",            "type": "STRING"},
-    {"name": "device_platform",    "type": "STRING"},
-    {"name": "publisher_platform", "type": "STRING"},
-    {"name": "platform_position",  "type": "STRING"},
     {"name": "campaign_id",        "type": "STRING"},
     {"name": "campaign_name",      "type": "STRING"},
     {"name": "campaign_objective", "type": "STRING"},
@@ -75,9 +72,6 @@ def flatten_row(row: dict, account_id: str) -> dict:
         "source":             "meta",
         "account_id":         account_id,
         "country":            row.get("country"),
-        "device_platform":    row.get("impression_device"),
-        "publisher_platform": row.get("publisher_platform"),
-        "platform_position":  row.get("platform_position"),
         "campaign_id":        row.get("campaign_id"),
         "campaign_name":      row.get("campaign_name"),
         "campaign_objective": row.get("objective"),
@@ -111,7 +105,7 @@ def pull_chunk(account, since: str, until: str) -> list:
         "time_increment": "1",
         "level": "ad",
         "fields": FIELDS,
-        "breakdowns": ["country", "impression_device", "publisher_platform", "platform_position"],
+        "breakdowns": ["country"],
         "limit": 5000,
     }
     cursor = account.get_insights(params=params)

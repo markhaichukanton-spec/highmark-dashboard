@@ -1,7 +1,7 @@
 """
 tmp_export_daily.py — pull one day of ad-level stats and export to CSV.
 
-Each row = date × country × device × placement × campaign × adset × ad
+Each row = date × country × campaign × adset × ad
 
 Usage:
     python src/tmp_export_daily.py --project aurora-scents
@@ -64,7 +64,7 @@ def pull_day(account: AdAccount, target_date: str) -> list[dict]:
         "time_increment": "1",
         "level": "ad",
         "fields": fields,
-        "breakdowns": ["country", "impression_device", "publisher_platform", "platform_position"],
+        "breakdowns": ["country"],
         "limit": 5000,
     }
     cursor = account.get_insights(params=params)
@@ -90,9 +90,6 @@ def flatten(rows: list[dict], account_id: str) -> list[dict]:
             "Source":             "meta",
             "Account ID":         account_id,
             "GEO":                country,
-            "Device":             r.get("impression_device"),
-            "Publisher Platform": r.get("publisher_platform"),
-            "Platform Position":  r.get("platform_position"),
             "Campaign ID":        r.get("campaign_id"),
             "Campaign Name":      r.get("campaign_name"),
             "Campaign Objective": r.get("objective"),
@@ -127,7 +124,7 @@ def main() -> None:
     FacebookAdsApi.init(access_token=token)
     account = AdAccount(cfg["meta"]["ad_account_id"])
 
-    print(f"Pulling {args.date} (ad level + country + device + placement)...", flush=True)
+    print(f"Pulling {args.date} (ad level + country)...", flush=True)
     raw = pull_day(account, args.date)
     print(f"  {len(raw)} rows from Meta API", flush=True)
 

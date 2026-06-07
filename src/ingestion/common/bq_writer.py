@@ -14,15 +14,12 @@ from google.oauth2 import service_account
 # ── Schema definitions ────────────────────────────────────────────────────────
 
 SCHEMAS: dict[str, list[bigquery.SchemaField]] = {
-    # One flat row = date × country × device × placement × campaign × adset × ad
+    # One flat row = date × country × campaign × adset × ad
     "ad_insights": [
         bigquery.SchemaField("date",               "DATE"),
         bigquery.SchemaField("source",             "STRING"),
         bigquery.SchemaField("account_id",         "STRING"),
         bigquery.SchemaField("country",            "STRING"),
-        bigquery.SchemaField("device_platform",    "STRING"),
-        bigquery.SchemaField("publisher_platform", "STRING"),
-        bigquery.SchemaField("platform_position",  "STRING"),
         bigquery.SchemaField("campaign_id",        "STRING"),
         bigquery.SchemaField("campaign_name",      "STRING"),
         bigquery.SchemaField("campaign_objective", "STRING"),
