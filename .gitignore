@@ -41,6 +41,11 @@ assets/*.mp4
 Thumbs.db
 desktop.ini
 
+# Next.js app
+app/.env.local
+app/.next/
+app/node_modules/
+
 # IDE
 .vscode/
 .idea/
