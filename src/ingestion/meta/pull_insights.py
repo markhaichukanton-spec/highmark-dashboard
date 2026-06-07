@@ -1,8 +1,8 @@
 """
 pull_insights.py — Meta Marketing API: pull one flat ad-level table.
 
-One row = date × country × campaign × adset × ad.
-Writes to BigQuery raw_ad_insights (17 columns + _loaded_at).
+One row = date × country × device × placement × campaign × adset × ad.
+Writes to BigQuery raw_ad_insights (20 columns + _loaded_at).
 
 Usage:
     python src/ingestion/meta/pull_insights.py --project aurora-scents --since 2026-01-01
@@ -69,6 +69,9 @@ def flatten_row(row: dict, account_id: str) -> dict:
         "source":             "meta",
         "account_id":         account_id,
         "country":            row.get("country"),
+        "device_platform":    row.get("impression_device"),
+        "publisher_platform": row.get("publisher_platform"),
+        "platform_position":  row.get("platform_position"),
         "campaign_id":        row.get("campaign_id"),
         "campaign_name":      row.get("campaign_name"),
         "campaign_objective": row.get("objective"),
@@ -102,7 +105,7 @@ def pull_chunk(account: AdAccount, since: str, until: str) -> list:
         "time_increment": "1",
         "level": "ad",
         "fields": FIELDS,
-        "breakdowns": ["country"],
+        "breakdowns": ["country", "impression_device", "publisher_platform", "platform_position"],
         "limit": 5000,
     }
     cursor = account.get_insights(params=params)
@@ -115,7 +118,7 @@ def pull_chunk(account: AdAccount, since: str, until: str) -> list:
 
 def pull_all(account: AdAccount, since: str, until: str, account_id: str):
     """Yield (label, flat_rows) for each weekly chunk, with retry logic."""
-    print(f"Pulling {since} -> {until} (ad level + country)", flush=True)
+    print(f"Pulling {since} -> {until} (ad level + country + device + placement)", flush=True)
     total = 0
     for cs, ce in week_chunks(since, until):
         attempt = 0
