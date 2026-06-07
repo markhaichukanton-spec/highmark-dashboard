@@ -98,7 +98,7 @@ Dataset: `meta_ads` | GCP project: `aurora-scents-494012` | Region: EU
 
 ### One flat table — `raw_ad_insights`
 
-This is the **only source for Looker Studio**. One row = date × country × campaign × adset × ad.
+This is the **only source for Looker Studio**. One row = date × country × device × placement × campaign × adset × ad.
 
 | # | Column | Type | Notes |
 |---|--------|------|-------|
@@ -106,22 +106,27 @@ This is the **only source for Looker Studio**. One row = date × country × camp
 | 2 | `source` | STRING | Always "meta" |
 | 3 | `account_id` | STRING | Meta ad account ID |
 | 4 | `country` | STRING | ISO country code |
-| 5 | `campaign_id` | STRING | |
-| 6 | `campaign_name` | STRING | |
-| 7 | `campaign_objective` | STRING | e.g. OUTCOME_SALES |
-| 8 | `adset_id` | STRING | |
-| 9 | `adset_name` | STRING | |
-| 10 | `ad_id` | STRING | |
-| 11 | `ad_name` | STRING | |
-| 12 | `impressions` | INT64 | |
-| 13 | `clicks` | INT64 | |
-| 14 | `spend` | FLOAT64 | |
-| 15 | `purchases` | INT64 | |
-| 16 | `revenue` | FLOAT64 | purchase_value from Meta API |
-| 17 | `reach` | INT64 | Not additive across rows |
+| 5 | `device_platform` | STRING | mobile_app / desktop / mobile_web |
+| 6 | `publisher_platform` | STRING | facebook / instagram / audience_network |
+| 7 | `platform_position` | STRING | feed / story / reels / right_hand_column / etc. |
+| 8 | `campaign_id` | STRING | |
+| 9 | `campaign_name` | STRING | |
+| 10 | `campaign_objective` | STRING | e.g. OUTCOME_SALES |
+| 11 | `adset_id` | STRING | |
+| 12 | `adset_name` | STRING | |
+| 13 | `ad_id` | STRING | |
+| 14 | `ad_name` | STRING | |
+| 15 | `impressions` | INT64 | |
+| 16 | `clicks` | INT64 | |
+| 17 | `spend` | FLOAT64 | |
+| 18 | `purchases` | INT64 | |
+| 19 | `revenue` | FLOAT64 | purchase_value from Meta API |
+| 20 | `reach` | INT64 | Not additive across rows |
 | — | `_loaded_at` | TIMESTAMP | Technical, not a data column |
 
 Partitioned by `date` (MONTH).
+
+Meta breakdowns used: `["country", "impression_device", "publisher_platform", "platform_position"]`
 
 ### ⚠️ Raw metrics only — NO calculated fields anywhere
 
