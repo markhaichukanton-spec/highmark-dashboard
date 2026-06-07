@@ -1,0 +1,19 @@
+project_id: aurora-scents
+display_name: "Aurora Scents"
+
+meta:
+  ad_account_id: act_623779156320026
+
+bigquery:
+  project: aurora-scents-494012
+  dataset: meta_ads
+  location: EU
+
+kpi_targets:
+  target_roas: 3.0
+  target_cpa: null
+
+brief: >
+  Aurora Scents — luxury perfume brand. Markets: MENA (UAE, Iraq, Oman, Qatar, SA),
+  Africa (Kenya, Nigeria), USA, Canada. Currency: AED (UAE Dirham).
+  Key objective: OUTCOME_SALES via Meta campaigns.
