@@ -21,6 +21,20 @@ dist/*.xlsx
 
 # Logs
 analysis/*.log
+analysis/*.json
+
+# Local planning notes
+Задача.txt
+*.tmp.txt
+
+# Versions & assets (large binary files, client deliverables)
+versions/*.pdf
+versions/*.pptx
+versions/*.key
+assets/*.png
+assets/*.jpg
+assets/*.webp
+assets/*.mp4
 
 # OS
 .DS_Store

@@ -1,11 +1,11 @@
 """
-tmp_export_daily.py — pull one day of ad-level stats and export to CSV.
+export_daily.py — pull one day of ad-level stats and export to CSV.
 
 Each row = date × country × campaign × adset × ad
 
 Usage:
-    python src/tmp_export_daily.py --project aurora-scents
-    python src/tmp_export_daily.py --project aurora-scents --date 2026-06-01
+    python src/export_daily.py --project aurora-scents
+    python src/export_daily.py --project aurora-scents --date 2026-06-01
 
 Output: dist/<project>_raw_<date>.csv
 """

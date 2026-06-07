@@ -30,7 +30,7 @@ python src/ingestion/meta/pull_insights.py --project aurora-scents --since 2025-
 python src/ingestion/meta/pull_creatives.py --project aurora-scents
 
 # Quick CSV export for one day
-python src/tmp_export_daily.py --project aurora-scents --date 2026-06-03
+python src/export_daily.py --project aurora-scents --date 2026-06-03
 
 # (future) Next.js app
 cd app && npm install && npm run dev
@@ -148,7 +148,7 @@ Schema defined in `src/ingestion/common/bq_writer.py` → `SCHEMAS["creatives"]`
 
 ## CSV Export Format
 
-`src/tmp_export_daily.py` exports one day to `dist/<project>_raw_<date>.csv`.
+`src/export_daily.py` exports one day to `dist/<project>_raw_<date>.csv`.
 
 Same 17 columns as `raw_ad_insights`, human-readable headers:
 ```
