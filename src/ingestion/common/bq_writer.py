@@ -35,6 +35,28 @@ SCHEMAS: dict[str, list[bigquery.SchemaField]] = {
         bigquery.SchemaField("reach",              "INT64"),
         bigquery.SchemaField("_loaded_at",         "TIMESTAMP"),
     ],
+    # One flat row = date × publisher_platform × platform_position × campaign × adset × ad
+    "ad_placements": [
+        bigquery.SchemaField("date",               "DATE"),
+        bigquery.SchemaField("source",             "STRING"),
+        bigquery.SchemaField("account_id",         "STRING"),
+        bigquery.SchemaField("publisher_platform", "STRING"),
+        bigquery.SchemaField("platform_position",  "STRING"),
+        bigquery.SchemaField("campaign_id",        "STRING"),
+        bigquery.SchemaField("campaign_name",      "STRING"),
+        bigquery.SchemaField("campaign_objective", "STRING"),
+        bigquery.SchemaField("adset_id",           "STRING"),
+        bigquery.SchemaField("adset_name",         "STRING"),
+        bigquery.SchemaField("ad_id",              "STRING"),
+        bigquery.SchemaField("ad_name",            "STRING"),
+        bigquery.SchemaField("impressions",        "INT64"),
+        bigquery.SchemaField("clicks",             "INT64"),
+        bigquery.SchemaField("spend",              "FLOAT64"),
+        bigquery.SchemaField("purchases",          "INT64"),
+        bigquery.SchemaField("revenue",            "FLOAT64"),
+        bigquery.SchemaField("reach",              "INT64"),
+        bigquery.SchemaField("_loaded_at",         "TIMESTAMP"),
+    ],
     "creatives": [
         bigquery.SchemaField("ad_id",                             "STRING"),
         bigquery.SchemaField("creative_id",                       "STRING"),
@@ -51,8 +73,9 @@ SCHEMAS: dict[str, list[bigquery.SchemaField]] = {
 }
 
 TABLE_NAMES = {
-    "ad_insights": "raw_ad_insights",
-    "creatives":   "raw_ad_creatives",
+    "ad_insights":   "raw_ad_insights",
+    "ad_placements": "raw_ad_placements",
+    "creatives":     "raw_ad_creatives",
 }
 
 # ── Client ────────────────────────────────────────────────────────────────────
