@@ -1,37 +1,131 @@
-// Dashboard page — UI components will be added after Claude Design prototype
-// Data layer: /api/kpi  /api/timeseries  /api/table  /api/filters
+'use client'
+import { useState, useEffect, useCallback } from 'react'
+import { format, subDays } from 'date-fns'
+import { loadDashboard, type DashboardData, type DashboardFilterOptions } from '@/lib/dashboard-client'
+import { DashboardHeader } from '@/components/dashboard/DashboardHeader'
+import { FilterBar } from '@/components/dashboard/FilterBar'
+import { Granularity } from '@/components/dashboard/Granularity'
+import { KPIRow } from '@/components/dashboard/KPIRow'
+import { SummaryTable } from '@/components/dashboard/SummaryTable'
+import { MetricChart } from '@/components/charts/MetricChart'
+import { GeoPie } from '@/components/charts/GeoPie'
+
+const DEFAULT_FROM = format(subDays(new Date(), 30), 'yyyy-MM-dd')
+const DEFAULT_TO   = format(new Date(), 'yyyy-MM-dd')
+
+const EMPTY_FILTERS: DashboardFilterOptions = {
+  Source: ['All sources'],
+  GEO: ['All GEOs'],
+  'Campaign Type': ['All types'],
+  Device: ['All devices'],
+  Campaign: ['All campaigns'],
+  Adset: ['All adsets'],
+  Ad: ['All ads'],
+}
 
 export default function DashboardPage() {
+  const [compare, setCompare]   = useState('previous_period')
+  const [gran, setGran]         = useState('Day')
+  const [selected, setSelected] = useState(['roas', 'revenue', 'spend'])
+  const [filterValues, setFilterValues] = useState<Record<string, string[]>>({})
+  const [data, setData]         = useState<DashboardData | null>(null)
+  const [loading, setLoading]   = useState(true)
+  const [error, setError]       = useState<string | null>(null)
+  const [compact, setCompact]   = useState(false)
+
+  const filters = data?.FILTERS ?? EMPTY_FILTERS
+
+  const onFilter = useCallback((k: string, v: string[]) => {
+    setFilterValues((f) => ({ ...f, [k]: v }))
+  }, [])
+
+  const resetFilters = useCallback(() => setFilterValues({}), [])
+
+  const toggleMetric = useCallback((key: string) => {
+    setSelected((cur) => {
+      if (cur.includes(key)) {
+        if (cur.length === 1) return cur
+        return cur.filter((k) => k !== key)
+      }
+      return [...cur, key]
+    })
+  }, [])
+
+  useEffect(() => {
+    let ticking = false
+    const apply = () => {
+      ticking = false
+      const y = window.scrollY
+      setCompact((c) => (c ? y > 24 : y > 120))
+    }
+    const onScroll = () => {
+      if (!ticking) { ticking = true; window.requestAnimationFrame(apply) }
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    apply()
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  useEffect(() => {
+    setLoading(true)
+    setError(null)
+    loadDashboard({
+      from: DEFAULT_FROM,
+      to: DEFAULT_TO,
+      granularity: gran.toLowerCase(),
+      compare,
+      filters: filterValues as Partial<DashboardFilterOptions>,
+    })
+      .then(setData)
+      .catch((e: Error) => setError(e.message))
+      .finally(() => setLoading(false))
+  }, [gran, compare, filterValues])
+
+  const since = DEFAULT_FROM
+  const until = DEFAULT_TO
+
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="dash">
+      <div className={'topbar' + (compact ? ' compact' : '')}>
+        <DashboardHeader since={since} until={until} compare={compare} onCompare={setCompare} />
+        <FilterBar filters={filters} values={filterValues} onChange={onFilter} onReset={resetFilters} />
+      </div>
 
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-900">
-              {process.env.NEXT_PUBLIC_PROJECT_DISPLAY_NAME ?? 'Aurora Scents'} · Meta Ads
-            </h1>
-            <p className="text-sm text-gray-500 mt-1">
-              High Mark Agency Platform
-            </p>
+      <div className="dash-body">
+        {error && (
+          <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: '12px 16px', marginBottom: 16, fontFamily: 'var(--mono)', fontSize: 12, color: '#B91C1C' }}>
+            Error: {error}
           </div>
-        </div>
+        )}
 
-        {/* Placeholder — replace with Claude Design components */}
-        <div className="rounded-xl border-2 border-dashed border-gray-300 bg-white p-12 text-center">
-          <p className="text-gray-400 text-lg font-medium">Dashboard UI</p>
-          <p className="text-gray-400 text-sm mt-2">
-            Claude Design компоненты будут интегрированы сюда.
-          </p>
-          <p className="text-gray-400 text-sm mt-1">
-            API готов: <code className="bg-gray-100 px-1 rounded">/api/kpi</code>{' '}
-            <code className="bg-gray-100 px-1 rounded">/api/timeseries</code>{' '}
-            <code className="bg-gray-100 px-1 rounded">/api/table</code>{' '}
-            <code className="bg-gray-100 px-1 rounded">/api/filters</code>
-          </p>
-        </div>
+        {loading && !data ? (
+          <div style={{ textAlign: 'center', padding: '80px 0', fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--muted)', letterSpacing: '0.2em', textTransform: 'uppercase' }}>
+            Loading…
+          </div>
+        ) : data ? (
+          <>
+            <KPIRow
+              kpis={data.KPIS}
+              selected={selected}
+              onToggle={toggleMetric}
+              metas={data.METRIC_META}
+            />
 
+            <Granularity value={gran} onChange={setGran} />
+
+            <div className="analytics-grid">
+              <MetricChart data={data.SERIES} selected={selected} metas={data.METRIC_META} />
+              <GeoPie geoData={data.GEO} metas={data.METRIC_META} colors={data.GEO_COLORS} />
+            </div>
+
+            <SummaryTable rows={data.TABLE} />
+
+            <div className="dash-foot">
+              <span>Data refreshed daily · Source: Meta Marketing API</span>
+              <span className="hm-mini">High<span className="slash">/</span>Mark</span>
+            </div>
+          </>
+        ) : null}
       </div>
     </div>
   )
