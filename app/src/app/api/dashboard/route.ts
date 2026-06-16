@@ -8,13 +8,14 @@ import {
   filtersQuery,
   buildTableTree,
   formatPeriodLabel,
+  parseDashboardFilters,
   prevPeriodFilters,
   prevYearFilters,
   type DashboardFilters,
   type KPIRow,
   type Granularity,
 } from '@/lib/queries'
-import { subDays, format } from 'date-fns'
+import { format } from 'date-fns'
 
 function toNum(v: unknown): number {
   if (v == null) return 0
@@ -65,27 +66,9 @@ const KPI_DEFS = [
   { seriesKey: 'cpc',       label: 'CPC',       unit: 'currency',  sub: 'Cost per click',         get: (r: KPIRow) => r.cpc ?? 0 },
 ] as const
 
-function parseFilters(req: NextRequest): DashboardFilters {
-  const s = req.nextUrl.searchParams
-  const getAll = (k: string) => {
-    const vals = s.getAll(k).filter(Boolean)
-    return vals.length > 0 ? vals : undefined
-  }
-  return {
-    since: s.get('from') ?? format(subDays(new Date(), 30), 'yyyy-MM-dd'),
-    until: s.get('to')   ?? format(new Date(), 'yyyy-MM-dd'),
-    source:        getAll('source'),
-    geo:           getAll('geo'),
-    campaign_type: getAll('campaign_type'),
-    campaign:      getAll('campaign'),
-    adset:         getAll('adset'),
-    ad:            getAll('ad'),
-  }
-}
-
 export async function GET(req: NextRequest) {
   try {
-    const filters = parseFilters(req)
+    const filters: DashboardFilters = parseDashboardFilters(req.nextUrl.searchParams)
     const rawGran = (req.nextUrl.searchParams.get('granularity') ?? 'day').toUpperCase()
     const granularity = (['DAY', 'WEEK', 'MONTH', 'QUARTER', 'YEAR'].includes(rawGran)
       ? rawGran : 'DAY') as Granularity

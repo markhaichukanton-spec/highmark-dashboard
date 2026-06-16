@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import { format, subDays } from 'date-fns'
-import { loadDashboard, type DashboardData, type DashboardFilterOptions } from '@/lib/dashboard-client'
+import { loadDashboard, exportUrl, type DashboardData, type DashboardFilterOptions } from '@/lib/dashboard-client'
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader'
 import { FilterBar } from '@/components/dashboard/FilterBar'
 import { Granularity } from '@/components/dashboard/Granularity'
@@ -28,6 +28,7 @@ export default function DashboardPage() {
   const [gran, setGran]         = useState('Day')
   const [selected, setSelected] = useState(['roas', 'revenue', 'spend'])
   const [filterValues, setFilterValues] = useState<Record<string, string[]>>({})
+  const [range, setRange]       = useState({ from: DEFAULT_FROM, to: DEFAULT_TO })
   const [data, setData]         = useState<DashboardData | null>(null)
   const [loading, setLoading]   = useState(true)
   const [error, setError]       = useState<string | null>(null)
@@ -51,6 +52,21 @@ export default function DashboardPage() {
     })
   }, [])
 
+  const onDateChange = useCallback((from: string, to: string) => {
+    setRange({ from, to })
+  }, [])
+
+  const onExport = useCallback(() => {
+    const url = exportUrl({
+      from: range.from,
+      to: range.to,
+      filters: filterValues as Partial<DashboardFilterOptions>,
+    })
+    const a = document.createElement('a')
+    a.href = url
+    a.click()
+  }, [range, filterValues])
+
   useEffect(() => {
     let ticking = false
     const apply = () => {
@@ -70,8 +86,8 @@ export default function DashboardPage() {
     setLoading(true)
     setError(null)
     loadDashboard({
-      from: DEFAULT_FROM,
-      to: DEFAULT_TO,
+      from: range.from,
+      to: range.to,
       granularity: gran.toLowerCase(),
       compare,
       filters: filterValues as Partial<DashboardFilterOptions>,
@@ -79,15 +95,22 @@ export default function DashboardPage() {
       .then(setData)
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false))
-  }, [gran, compare, filterValues])
+  }, [range, gran, compare, filterValues])
 
-  const since = DEFAULT_FROM
-  const until = DEFAULT_TO
+  const since = range.from
+  const until = range.to
 
   return (
     <div className="dash">
       <div className={'topbar' + (compact ? ' compact' : '')}>
-        <DashboardHeader since={since} until={until} compare={compare} onCompare={setCompare} />
+        <DashboardHeader
+          since={since}
+          until={until}
+          compare={compare}
+          onCompare={setCompare}
+          onDateChange={onDateChange}
+          onExport={onExport}
+        />
         <FilterBar filters={filters} values={filterValues} onChange={onFilter} onReset={resetFilters} />
       </div>
 

@@ -34,7 +34,7 @@ body { font-family: var(--sans); color: var(--ink); -webkit-font-smoothing: anti
 .topbar { position: sticky; top: 0; z-index: 30; }
 
 /* ── HEADER ── */
-.dash-head { background: #F4F0E6; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; padding: 22px 32px; backdrop-filter: blur(6px); transition: padding .22s cubic-bezier(.4,0,.1,1); }
+.dash-head { background: #F4F0E6; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; padding: 22px 32px; transition: padding .22s cubic-bezier(.4,0,.1,1); }
 .head-left { display: flex; align-items: center; gap: 20px; }
 .hm-logo { font-family: var(--serif); font-weight: 600; font-size: 26px; letter-spacing: -.02em; color: var(--ink); line-height: 1; transition: font-size .22s cubic-bezier(.4,0,.1,1); }
 .hm-logo .slash { color: var(--gold); }
@@ -43,9 +43,24 @@ body { font-family: var(--sans); color: var(--ink); -webkit-font-smoothing: anti
 .head-titles .eyebrow { display: block; margin-bottom: 3px; max-height: 16px; opacity: 1; transition: max-height .22s, opacity .18s, margin .22s; }
 .head-h1 { font-family: var(--serif); font-weight: 500; font-size: 23px; letter-spacing: -.01em; line-height: 1; transition: font-size .22s cubic-bezier(.4,0,.1,1); }
 .head-right { display: flex; align-items: center; gap: 12px; }
-.daterange { display: flex; align-items: center; gap: 9px; font-family: var(--mono); font-size: 12px; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 9px; padding: 9px 13px; }
+.drp { position: relative; }
+.daterange { display: flex; align-items: center; gap: 9px; font-family: var(--mono); font-size: 12px; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 9px; padding: 9px 13px; cursor: pointer; transition: .15s; }
+.daterange:hover { border-color: var(--line-2); }
+.drp.open .daterange { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(201,168,76,.16); }
 .daterange svg { color: var(--muted); }
 .dr-sep { color: var(--muted); }
+.drp-pop { position: absolute; top: calc(100% + 6px); right: 0; z-index: 60; width: 290px; background: var(--paper); border: 1px solid var(--line-2); border-radius: 12px; box-shadow: 0 18px 44px -16px rgba(20,18,30,.4); overflow: hidden; animation: msIn .14s ease; }
+.drp-presets { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 12px; border-bottom: 1px solid var(--line); }
+.drp-preset { font-family: var(--sans); font-size: 12.5px; font-weight: 500; color: var(--ink); background: var(--cream); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; cursor: pointer; text-align: left; transition: .14s; }
+.drp-preset:hover { border-color: var(--gold); }
+.drp-preset.on { border-color: var(--gold-deep); background: rgba(201,168,76,.14); color: var(--gold-deep); font-weight: 600; }
+.drp-custom { display: flex; align-items: end; gap: 8px; padding: 12px; }
+.drp-field { flex: 1; display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.drp-field span { font-family: var(--mono); font-size: 9px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.drp-field input { font-family: var(--sans); font-size: 12.5px; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 7px; padding: 7px 8px; min-width: 0; }
+.drp-field input:focus { outline: none; border-color: var(--gold); }
+.drp-apply { font-family: var(--sans); font-weight: 600; font-size: 12.5px; color: #fff; background: var(--gold-deep); border: 1px solid var(--gold-deep); border-radius: 7px; padding: 8px 12px; cursor: pointer; transition: .14s; }
+.drp-apply:hover { background: var(--ink); border-color: var(--ink); }
 .export-btn { display: inline-flex; align-items: center; gap: 7px; font-family: var(--sans); font-weight: 600; font-size: 12.5px; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 9px; padding: 9px 14px; cursor: pointer; transition: .15s; }
 .export-btn:hover { border-color: var(--line-2); box-shadow: 0 4px 12px -6px rgba(20,18,30,.18); }
 .export-btn svg { color: var(--gold-deep); }

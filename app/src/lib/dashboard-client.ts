@@ -125,7 +125,7 @@ function adaptKpis(kpis: Array<{ label: string; seriesKey: string; value: number
   }))
 }
 
-function buildQuery({ from, to, granularity = 'day', compare = 'previous_period', filters = {} }: LoadParams): string {
+export function buildQuery({ from, to, granularity = 'day', compare = 'previous_period', filters = {} }: LoadParams): string {
   const q = new URLSearchParams({ from, to, granularity, compare })
   const keyMap: Record<string, string> = {
     Source: 'source', GEO: 'geo', 'Campaign Type': 'campaign_type',
@@ -136,6 +136,10 @@ function buildQuery({ from, to, granularity = 'day', compare = 'previous_period'
     ;(values as string[] || []).forEach((v) => q.append(param, v))
   }
   return q.toString()
+}
+
+export function exportUrl(params: LoadParams): string {
+  return '/api/export?' + buildQuery(params)
 }
 
 export async function loadDashboard(params: LoadParams): Promise<DashboardData> {

@@ -221,6 +221,50 @@ export function dashTableQuery(f: DashboardFilters): string {
     ORDER BY spend DESC`
 }
 
+export function exportQuery(f: DashboardFilters): string {
+  return `
+    SELECT
+      date,
+      source,
+      account_id,
+      country AS geo,
+      campaign_id,
+      campaign_name,
+      campaign_objective,
+      adset_id,
+      adset_name,
+      ad_id,
+      ad_name,
+      impressions,
+      clicks,
+      CAST(spend AS FLOAT64)   AS spend,
+      purchases,
+      CAST(revenue AS FLOAT64) AS revenue,
+      reach
+    FROM ${TABLE}
+    WHERE ${buildDashWhere(f)}
+    ORDER BY date, spend DESC`
+}
+
+// ── shared request parsing ───────────────────────────────────
+
+export function parseDashboardFilters(s: URLSearchParams): DashboardFilters {
+  const getAll = (k: string) => {
+    const vals = s.getAll(k).filter(Boolean)
+    return vals.length > 0 ? vals : undefined
+  }
+  return {
+    since: s.get('from') ?? format(subDays(new Date(), 30), 'yyyy-MM-dd'),
+    until: s.get('to')   ?? format(new Date(), 'yyyy-MM-dd'),
+    source:        getAll('source'),
+    geo:           getAll('geo'),
+    campaign_type: getAll('campaign_type'),
+    campaign:      getAll('campaign'),
+    adset:         getAll('adset'),
+    ad:            getAll('ad'),
+  }
+}
+
 // ── period helpers ───────────────────────────────────────────
 
 export function prevPeriodFilters(f: DashboardFilters): DashboardFilters {
