@@ -1,7 +1,7 @@
 /* dash-charts.jsx — interactive MetricChart (driven by KPI selection) + GeoPie donut.
    Exports to window: MetricChart, GeoPie */
 const {
-  ResponsiveContainer, ComposedChart, Bar, Line, XAxis, YAxis,
+  ResponsiveContainer, ComposedChart, BarChart, Bar, Line, XAxis, YAxis,
   CartesianGrid, Tooltip, ReferenceLine, LabelList,
   PieChart, Pie, Cell,
 } = Recharts;
@@ -94,18 +94,20 @@ function MetricChart({ data, selected, metas }) {
   );
 }
 
-/* ── GEO donut — switches between the three bar metrics ──── */
-function GeoPie({ geoData, metas, colors }) {
+/* ── GEO ranking — horizontal bars per country for the selected metric ── */
+function GeoBars({ geoData, metas, colors }) {
   const OPTS = ['revenue', 'spend', 'purchases'];
-  const [pieKey, setPieKey] = React.useState('revenue');
-  const meta = metas[pieKey];
+  const [key, setKey] = React.useState('revenue');
+  const meta = metas[key];
   const data = geoData
     .map((g, i) => ({ name: g.geo, value: g[meta.key], color: colors[i % colors.length] }))
-    .filter((d) => d.value > 0);
+    .filter((d) => d.value > 0)
+    .sort((a, b) => b.value - a.value); // largest on top (vertical layout renders data[0] topmost)
   const total = data.reduce((a, d) => a + d.value, 0);
+  const barLabel = (v) => `${meta.short(v)} · ${total ? Math.round((v / total) * 100) : 0}%`;
 
   return (
-    <div className="chart-card pie-card">
+    <div className="chart-card pie-card geo-bars">
       <div className="chart-head pie-head">
         <div>
           <span className="chart-eyebrow">By GEO</span>
@@ -114,52 +116,42 @@ function GeoPie({ geoData, metas, colors }) {
       </div>
       <div className="pie-seg">
         {OPTS.map((k) => (
-          <button key={k} className={'pie-seg-btn' + (k === pieKey ? ' on' : '')}
-            style={k === pieKey ? { '--mc': metas[k].color } : undefined}
-            onClick={() => setPieKey(k)}>{metas[k].label}</button>
+          <button key={k} className={'pie-seg-btn' + (k === key ? ' on' : '')}
+            style={k === key ? { '--mc': metas[k].color } : undefined}
+            onClick={() => setKey(k)}>{metas[k].label}</button>
         ))}
       </div>
-      <div className="pie-body">
+      <div className="pie-body geo-bars-body">
         <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%"
-              innerRadius="58%" outerRadius="86%" paddingAngle={2} stroke="none" isAnimationActive={false}>
-              {data.map((d) => <Cell key={d.name} fill={d.color} />)}
-            </Pie>
-            <Tooltip content={({ active, payload }) => {
+          <BarChart data={data} layout="vertical" margin={{ top: 6, right: 78, left: 4, bottom: 2 }} barCategoryGap="34%">
+            <CartesianGrid stroke="rgba(20,18,30,0.07)" horizontal={false} />
+            <XAxis type="number" tick={{ ...AX, fontSize: 9 }} tickLine={false}
+              axisLine={{ stroke: 'rgba(20,18,30,0.14)' }} tickFormatter={(v) => fmt.compact(v)} />
+            <YAxis type="category" dataKey="name" tick={{ ...AX, fontSize: 11, fill: '#3A3B47' }}
+              tickLine={false} axisLine={false} width={58} />
+            <Tooltip cursor={{ fill: 'rgba(20,18,30,0.04)' }} content={({ active, payload }) => {
               if (!active || !payload || !payload.length) return null;
               const p = payload[0];
-              const share = total ? (p.value / total * 100).toFixed(1) : 0;
               return (
                 <div className="chart-tip">
                   <div className="tip-row" style={{ marginTop: 0 }}>
                     <span className="tip-dot" style={{ background: p.payload.color }} />
-                    <span className="tip-name">{p.name}</span>
+                    <span className="tip-name">{p.payload.name}</span>
                     <span className="tip-val">{meta.fmt(p.value)}</span>
                   </div>
-                  <div className="tip-share">{share}% of total</div>
                 </div>
               );
             }} />
-          </PieChart>
+            <Bar dataKey="value" radius={[0, 4, 4, 0]} maxBarSize={26} isAnimationActive={false}>
+              {data.map((d) => <Cell key={d.name} fill={d.color} />)}
+              <LabelList dataKey="value" position="right" formatter={barLabel}
+                fill="#3A3B47" offset={8} {...LABEL_FONT} />
+            </Bar>
+          </BarChart>
         </ResponsiveContainer>
-        <div className="pie-center">
-          <span className="pc-lbl">GEOs</span>
-          <span className="pc-val">{data.length}</span>
-        </div>
-      </div>
-      <div className="pie-legend">
-        {data.map((d) => (
-          <div className="pl-row" key={d.name}>
-            <span className="pl-dot" style={{ background: d.color }} />
-            <span className="pl-name">{d.name}</span>
-            <span className="pl-amt">{meta.fmt(d.value)}</span>
-            <span className="pl-val">{total ? (d.value / total * 100).toFixed(0) + '%' : '—'}</span>
-          </div>
-        ))}
       </div>
     </div>
   );
 }
 
-Object.assign(window, { MetricChart, GeoPie });
+Object.assign(window, { MetricChart, GeoBars });

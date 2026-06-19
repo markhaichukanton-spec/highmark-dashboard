@@ -95,6 +95,36 @@ const GEO = GEO_RAW.map((d) => ({
 }));
 const GEO_COLORS = ['#C9A84C', '#5B8DEF', '#7A6ECC', '#2F9E6A', '#8E6F3E'];
 
+// ── per-GEO daily series (drives the GEO line chart) ────────
+// Distribute each GEO's known metric total across the 7 days following the
+// overall daily shape, with a small deterministic per-GEO wobble, then
+// renormalise each GEO column so its 7-day sum equals the known total —
+// keeps the line chart self-consistent with the GEO breakdown above.
+const GEO_SERIES = (function () {
+  const out = {};
+  ['revenue', 'spend', 'purchases'].forEach((metric) => {
+    const dayTotals = SERIES.map((d) => d[metric]);
+    const daySum = dayTotals.reduce((a, b) => a + b, 0) || 1;
+    const dayShare = dayTotals.map((v) => v / daySum);
+    const active = GEO.filter((g) => g[metric] > 0);
+    const rows = SERIES.map((d, di) => {
+      const point = { label: d.label };
+      active.forEach((g, gi) => {
+        const wobble = 1 + 0.22 * Math.sin(di * 1.25 + gi * 1.7);
+        point[g.geo] = g[metric] * dayShare[di] * wobble;
+      });
+      return point;
+    });
+    active.forEach((g) => {
+      const colSum = rows.reduce((a, r) => a + r[g.geo], 0) || 1;
+      const scale = g[metric] / colSum;
+      rows.forEach((r) => { r[g.geo] = Math.round(r[g.geo] * scale); });
+    });
+    out[metric] = rows;
+  });
+  return out;
+})();
+
 // ── drill-down table: Campaign → Adset → Ad ─────────────────
 // helper to derive cr/ctr/cpc/cpm/impressions consistently
 function row(campaign, adset, ad, { spend, revenue, roas, purchases, clicks, impressions }) {
@@ -161,5 +191,5 @@ const FILTERS = {
   Ad: ['All ads', 'Oud Royale — Carousel', 'Rose Absolu — Reel 15s', 'Signature Set — Static', 'Brand Film 30s — Reel'],
 };
 
-const DATA = { COLORS, KPIS, SERIES, TABLE, FILTERS, METRIC_META, GEO, GEO_COLORS };
+const DATA = { COLORS, KPIS, SERIES, TABLE, FILTERS, METRIC_META, GEO, GEO_COLORS, GEO_SERIES };
 Object.assign(window, { DATA, fmt, COLORS });

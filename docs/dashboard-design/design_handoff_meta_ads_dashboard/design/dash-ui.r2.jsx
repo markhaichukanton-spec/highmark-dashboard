@@ -211,7 +211,7 @@ function KPIRow({ kpis, selected, onToggle, metas }) {
     <div className="kpi-block">
       <div className="kpi-block-head">
         <span className="eyebrow">Key Metrics</span>
-        <span className="kpi-hint">Click a metric to plot it — first pick drives the GEO donut</span>
+        <span className="kpi-hint">Click a metric to plot it on the chart — keep at least one</span>
       </div>
       <div className="kpi-row">
         {kpis.map((k) => {

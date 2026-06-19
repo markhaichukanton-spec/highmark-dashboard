@@ -49,7 +49,7 @@ export function MetricChart({ data, selected, metas }: Props) {
       <div className="chart-head">
         <div>
           <span className="chart-eyebrow">
-            {selected.length} metric{selected.length === 1 ? '' : 's'}
+            Daily · {selected.length} metric{selected.length === 1 ? '' : 's'}
           </span>
           <h3 className="chart-title">Performance over time</h3>
         </div>
