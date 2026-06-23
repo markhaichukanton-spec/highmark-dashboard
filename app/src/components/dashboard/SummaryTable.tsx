@@ -17,6 +17,8 @@ const COLDEFS = [
   { key: 'impressions', label: 'Impr.',  align: 'right', sortable: true, fmt: (v: number) => fmt.compact(v) },
 ] as const
 
+const LEVEL_KEY = ['Campaign', 'Adset', 'Ad'] as const
+
 function roasStyle(roas: number): React.CSSProperties {
   if (roas >= 3.0) return { background: COLORS.goodBg, color: COLORS.goodInk }
   if (roas < 2.0)  return { background: COLORS.badBg,  color: COLORS.badInk }
@@ -30,15 +32,33 @@ interface RowProps {
   expanded: Record<string, boolean>
   onToggle: (path: string) => void
   path: string
+  values: Record<string, string[]>
+  onToggleEntity: (levelKey: string, name: string) => void
 }
 
-function TableRow({ node, depth, label, expanded, onToggle, path }: RowProps) {
+function TableRow({ node, depth, label, expanded, onToggle, path, values, onToggleEntity }: RowProps) {
   const hasKids = !!(node.children && node.children.length > 0)
   const isOpen = expanded[path]
+  const levelKey = LEVEL_KEY[depth]
+  const sel = (values && values[levelKey]) || []
+  const checked = !!label && sel.includes(label)
+
   return (
     <Fragment>
-      <tr className={'tr-d' + depth}>
+      <tr className={'tr-d' + depth + (checked ? ' tr-sel' : '')}>
         <td className="tcell-name" style={{ paddingLeft: 16 + depth * 22 }}>
+          <button
+            className={'row-check' + (checked ? ' on' : '')}
+            onClick={() => label && onToggleEntity(levelKey, label)}
+            aria-label={checked ? 'remove from chart' : 'show on chart'}
+            title={checked ? 'Plotted on chart — click to remove' : 'Plot only this on the chart'}
+          >
+            {checked && (
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
+                <path d="M5 12l4 4 10-10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            )}
+          </button>
           {hasKids ? (
             <button
               className={'twist' + (isOpen ? ' open' : '')}
@@ -71,6 +91,8 @@ function TableRow({ node, depth, label, expanded, onToggle, path }: RowProps) {
           expanded={expanded}
           onToggle={onToggle}
           path={path + '-' + i}
+          values={values}
+          onToggleEntity={onToggleEntity}
         />
       ))}
     </Fragment>
@@ -79,15 +101,21 @@ function TableRow({ node, depth, label, expanded, onToggle, path }: RowProps) {
 
 interface Props {
   rows: TreeNode[]
+  values: Record<string, string[]>
+  onToggleEntity: (levelKey: string, name: string) => void
+  onClearScope: () => void
 }
 
-export function SummaryTable({ rows }: Props) {
+export function SummaryTable({ rows, values, onToggleEntity, onClearScope }: Props) {
   const [sort, setSort] = useState<{ key: string; dir: 'asc' | 'desc' }>({ key: 'spend', dir: 'desc' })
   const [expanded, setExpanded] = useState<Record<string, boolean>>({ '0': true })
 
   const toggle = useCallback((p: string) => {
     setExpanded((e) => ({ ...e, [p]: !e[p] }))
   }, [])
+
+  const scopeCount = (['Campaign', 'Adset', 'Ad'] as const)
+    .reduce((n, k) => n + ((values[k] || []).filter((v) => v !== ' ').length), 0)
 
   const sorted = useMemo(() => {
     const arr = [...rows]
@@ -107,7 +135,15 @@ export function SummaryTable({ rows }: Props) {
     <div className="table-card">
       <div className="table-head-bar">
         <h2 className="table-title">Campaign breakdown</h2>
-        <span className="table-hint">Click a row to drill into adsets &amp; ads</span>
+        {scopeCount > 0 ? (
+          <span className="table-scope">
+            <span className="scope-dot" />
+            {scopeCount} selected on chart
+            <button className="scope-clear" onClick={onClearScope}>Clear</button>
+          </span>
+        ) : (
+          <span className="table-hint">Tick a row to plot only it on the chart</span>
+        )}
       </div>
       <div className="table-scroll">
         <table className="summary-table">
@@ -143,6 +179,8 @@ export function SummaryTable({ rows }: Props) {
                 expanded={expanded}
                 onToggle={toggle}
                 path={String(i)}
+                values={values}
+                onToggleEntity={onToggleEntity}
               />
             ))}
           </tbody>

@@ -37,9 +37,10 @@ interface Props {
   data: SeriesPoint[]
   selected: string[]
   metas: Record<string, MetricMeta>
+  scope?: string
 }
 
-export function MetricChart({ data, selected, metas }: Props) {
+export function MetricChart({ data, selected, metas, scope }: Props) {
   const ordered = selected.map((k) => metas[k]).filter(Boolean)
   const left = ordered.filter((m) => m.axis === 'left')
   const right = ordered.filter((m) => m.axis === 'right')
@@ -49,7 +50,7 @@ export function MetricChart({ data, selected, metas }: Props) {
       <div className="chart-head">
         <div>
           <span className="chart-eyebrow">
-            Daily · {selected.length} metric{selected.length === 1 ? '' : 's'}
+            Daily · {selected.length} metric{selected.length === 1 ? '' : 's'}{scope ? ' · ' + scope : ''}
           </span>
           <h3 className="chart-title">Performance over time</h3>
         </div>

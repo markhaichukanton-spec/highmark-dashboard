@@ -190,11 +190,10 @@ body{font-family:var(--sans);color:var(--ink);-webkit-font-smoothing:antialiased
 .table-title{font-family:var(--serif);font-weight:500;font-size:21px;letter-spacing:-.01em;white-space:nowrap}
 .table-hint{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
 .table-scroll{overflow-x:hidden}
-.summary-table{width:100%;border-collapse:collapse;font-size:13px;table-layout:auto}
-/* numeric columns shrink to their content (width:1% + nowrap); the name column
-   has no width, so it absorbs ALL remaining space and WRAPS long names onto a
-   second line instead of clipping — names always show in full, never scrolls. */
-.summary-table th.th-right,.summary-table td.tcell-num{width:1%;white-space:nowrap}
+.summary-table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed}
+/* fixed layout: name column takes a fixed share, the 10 numeric columns split
+   the rest equally — the table always fits its container, never scrolls sideways */
+.summary-table th:first-child,.summary-table td:first-child{width:23%}
 .summary-table thead th{position:sticky;top:0;background:var(--cream);font-family:var(--mono);font-size:9.5px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;color:var(--gold-deep);padding:11px 14px;border-bottom:1px solid var(--line-2);white-space:nowrap;z-index:2}
 /* desktop: drop the nested scroll containers so thead pins to the WINDOW (an
    overflow:auto/hidden ancestor would trap sticky inside the card). Narrow
@@ -212,6 +211,7 @@ body{font-family:var(--sans);color:var(--ink);-webkit-font-smoothing:antialiased
   .tcell-num{font-size:11px}
 }
 @container dash (max-width:720px){
+  .summary-table th:first-child,.summary-table td:first-child{width:20%}
   .summary-table tbody td{padding-left:4px;padding-right:4px}
   .summary-table thead th{padding-left:4px;padding-right:4px}
   .tcell-num{font-size:10px}
@@ -227,13 +227,12 @@ th.sorted{color:var(--ink)}
 th.sortable:hover .sort-ind{opacity:.4}
 .sort-ind.on{opacity:1;color:var(--gold-deep)}
 .sort-ind.on.asc{transform:rotate(180deg)}
-.summary-table tbody td{padding:11px 9px;border-bottom:1px solid var(--line);white-space:nowrap}
+.summary-table tbody td{padding:11px 9px;border-bottom:1px solid var(--line);white-space:nowrap;overflow:hidden}
 .summary-table thead th{padding-left:9px;padding-right:9px}
 .summary-table tbody tr:last-child td{border-bottom:0}
-/* name cell: allow wrapping so a long campaign/adset/ad name never clips */
-.tcell-name{text-align:left;white-space:normal;min-width:160px}
-.tcell-num{text-align:right;font-family:var(--mono);font-size:12px;color:var(--ink);font-variant-numeric:tabular-nums}
-.name-txt{vertical-align:middle;white-space:normal;overflow-wrap:anywhere;font-family:var(--sans)}
+.tcell-name{text-align:left;white-space:nowrap}
+.tcell-num{text-align:right;font-family:var(--mono);font-size:12px;color:var(--ink);font-variant-numeric:tabular-nums;text-overflow:ellipsis}
+.name-txt{display:inline-block;vertical-align:middle;max-width:calc(100% - 30px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--sans)}
 /* depth styling */
 .tr-d0 .name-txt{font-weight:600;color:var(--ink)}
 .tr-d0 td{background:var(--paper)}
@@ -251,20 +250,6 @@ th.sortable:hover .sort-ind{opacity:.4}
 .twist.open svg{transform:rotate(90deg)}
 .twist.open{background:var(--ink);border-color:var(--ink);color:#fff}
 .twist-spacer{display:inline-block;width:18px;height:18px;margin-right:9px;vertical-align:middle}
-
-/* row checkbox — plots the row's entity on the chart (and adds it to filters) */
-.row-check{width:17px;height:17px;border-radius:5px;border:1.6px solid var(--line-2);background:var(--paper);display:inline-grid;place-items:center;vertical-align:middle;margin-right:10px;cursor:pointer;color:#fff;transition:.14s;flex:0 0 auto}
-.row-check:hover{border-color:var(--gold)}
-.row-check.on{background:var(--gold);border-color:var(--gold)}
-tr.tr-sel td{background:rgba(201,168,76,.12) !important}
-tr.tr-sel .name-txt{color:var(--ink)}
-tr.tr-sel td:first-child{box-shadow:inset 3px 0 0 var(--gold)}
-
-/* chart-scope indicator in the table header */
-.table-scope{display:inline-flex;align-items:center;gap:9px;font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold-deep)}
-.scope-dot{width:7px;height:7px;border-radius:50%;background:var(--gold)}
-.scope-clear{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:none;border:1px solid var(--line-2);border-radius:999px;padding:3px 10px;cursor:pointer;transition:.14s}
-.scope-clear:hover{border-color:var(--gold);color:var(--gold-deep)}
 
 /* footer note */
 .dash-foot{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:22px;padding-top:18px;border-top:1px solid var(--line);font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
@@ -442,28 +427,6 @@ function Dashboard() {
   const onFilter = useCallback((k, v) => setFilters((f) => ({ ...f, [k]: v })), []);
   const resetFilters = useCallback(() => setFilters(initialFilters), []);
 
-  // table-row checkbox ⇄ Campaign/Adset/Ad filter (bidirectional). Toggling a
-  // row adds/removes its name from the matching filter; the chart reads the
-  // same filters, so selection drives the chart AND shows up as a filter chip.
-  const toggleEntity = useCallback((levelKey, name) => {
-    setFilters((f) => {
-      const cur = (f[levelKey] || []).filter((n) => n !== '\u0000');
-      const next = cur.includes(name) ? cur.filter((n) => n !== name) : [...cur, name];
-      return { ...f, [levelKey]: next };
-    });
-  }, []);
-  const clearScope = useCallback(() => {
-    setFilters((f) => ({ ...f, Campaign: [], Adset: [], Ad: [] }));
-  }, []);
-
-  // chart data scoped to the current Campaign/Adset/Ad selection
-  const chartData = DATA.chartSeries(filters);
-  const scopeNames = ['Campaign', 'Adset', 'Ad']
-    .flatMap((k) => (filters[k] || []).filter((v) => v !== '\u0000'));
-  const scopeLabel = scopeNames.length === 0 ? ''
-    : scopeNames.length === 1 ? scopeNames[0]
-    : scopeNames.length + ' selected';
-
   const toggleMetric = useCallback((key) => {
     setSelected((cur) => {
       if (cur.includes(key)) {
@@ -545,12 +508,12 @@ function Dashboard() {
           <Granularity value={gran} onChange={setGran} />
 
           <div className="analytics-grid">
-            <MetricChart data={chartData} selected={selected} metas={DATA.METRIC_META} scope={scopeLabel} />
+            <MetricChart data={DATA.SERIES} selected={selected} metas={DATA.METRIC_META} />
             <GeoBars geoData={DATA.GEO} metas={DATA.METRIC_META} colors={DATA.GEO_COLORS} />
           </div>
         </div>
 
-        <SummaryTable rows={DATA.TABLE} values={filters} onToggleEntity={toggleEntity} onClearScope={clearScope} />
+        <SummaryTable rows={DATA.TABLE} />
 
         <div className="dash-foot">
           <span>Read-only client view · Data refreshed 07 Jun 2026, 08:00 GST</span>

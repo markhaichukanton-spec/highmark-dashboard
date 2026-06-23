@@ -1,0 +1,93 @@
+{
+  "kpis": [
+    { "label": "ROAS",      "seriesKey": "roas",      "value": 2.7244,  "unit": "ratio",     "deltaPct": 28.1,  "sub": "Return on ad spend" },
+    { "label": "Purchases", "seriesKey": "purchases", "value": 123,     "unit": "number",    "deltaPct": 0.8,   "sub": "Total conversions" },
+    { "label": "Revenue",   "seriesKey": "revenue",   "value": 39300,   "unit": "currency0", "deltaPct": -1.2,  "sub": "Meta attributed" },
+    { "label": "Spend",     "seriesKey": "spend",     "value": 14400,   "unit": "currency0", "deltaPct": -22.9, "sub": "Total ad spend" },
+    { "label": "CPM",       "seriesKey": "cpm",       "value": 12.55,   "unit": "currency",  "deltaPct": -20.6, "sub": "Cost per mille" },
+    { "label": "CTR",       "seriesKey": "ctr",       "value": 1.05,    "unit": "percent",   "deltaPct": -8.6,  "sub": "Click-through rate" },
+    { "label": "CR",        "seriesKey": "cr",        "value": 1.02,    "unit": "percent",   "deltaPct": 13.5,  "sub": "Conversion rate" },
+    { "label": "AOV",       "seriesKey": "aov",       "value": 319.27,  "unit": "currency",  "deltaPct": -2.0,  "sub": "Avg. order value" },
+    { "label": "CPO",       "seriesKey": "cpo",       "value": 117.19,  "unit": "currency",  "deltaPct": -23.5, "sub": "Cost per order" },
+    { "label": "CPC",       "seriesKey": "cpc",       "value": 1.19,    "unit": "currency",  "deltaPct": -13.1, "sub": "Cost per click" }
+  ],
+
+  "series": [
+    { "period": "2026-05-26", "label": "May 26", "spend": 2200, "revenue": 5720, "roas": 2.60, "clicks": 1850, "purchases": 18, "impressions": 176000 },
+    { "period": "2026-05-27", "label": "May 27", "spend": 2000, "revenue": 5600, "roas": 2.80, "clicks": 1680, "purchases": 17, "impressions": 160000 },
+    { "period": "2026-05-28", "label": "May 28", "spend": 1800, "revenue": 4500, "roas": 2.50, "clicks": 1510, "purchases": 14, "impressions": 144000 },
+    { "period": "2026-05-29", "label": "May 29", "spend": 2300, "revenue": 6670, "roas": 2.90, "clicks": 1930, "purchases": 21, "impressions": 184000 },
+    { "period": "2026-05-30", "label": "May 30", "spend": 2050, "revenue": 5535, "roas": 2.70, "clicks": 1720, "purchases": 18, "impressions": 164000 },
+    { "period": "2026-05-31", "label": "May 31", "spend": 2400, "revenue": 7200, "roas": 3.00, "clicks": 2010, "purchases": 22, "impressions": 192000 },
+    { "period": "2026-06-01", "label": "Jun 01", "spend": 1650, "revenue": 4075, "roas": 2.47, "clicks": 1400, "purchases": 13, "impressions": 132000 }
+  ],
+
+  "geo": [
+    { "geo": "UAE",     "spend": 1800, "revenue": 6840, "roas": 3.8, "purchases": 52, "clicks": 19800, "impressions": 1085000 },
+    { "geo": "Saudi",   "spend": 620,  "revenue": 1364, "roas": 2.2, "purchases": 14, "clicks": 8900,  "impressions": 612000 },
+    { "geo": "Kuwait",  "spend": 540,  "revenue": 1782, "roas": 3.3, "purchases": 16, "clicks": 5200,  "impressions": 300000 },
+    { "geo": "Qatar",   "spend": 410,  "revenue": 1230, "roas": 3.0, "purchases": 11, "clicks": 3800,  "impressions": 228000 },
+    { "geo": "Nigeria", "spend": 290,  "revenue": 0,    "roas": 0.0, "purchases": 0,  "clicks": 4100,  "impressions": 388000 }
+  ],
+
+  "table": [
+    {
+      "campaign": "UAE | ROAS | Sales", "adset": null, "ad": null,
+      "spend": 1800, "revenue": 6840, "roas": 3.8, "purchases": 52, "clicks": 19800, "impressions": 1085000,
+      "children": [
+        {
+          "campaign": "UAE | ROAS | Sales", "adset": "AS — Women 25–44 · Dubai", "ad": null,
+          "spend": 1120, "revenue": 4480, "roas": 4.0, "purchases": 33, "clicks": 12400, "impressions": 642000,
+          "children": [
+            { "campaign": "UAE | ROAS | Sales", "adset": "AS — Women 25–44 · Dubai", "ad": "Oud Royale — Carousel",  "spend": 640, "revenue": 2688, "roas": 4.2,  "purchases": 20, "clicks": 7300, "impressions": 358000 },
+            { "campaign": "UAE | ROAS | Sales", "adset": "AS — Women 25–44 · Dubai", "ad": "Rose Absolu — Reel 15s", "spend": 480, "revenue": 1792, "roas": 3.73, "purchases": 13, "clicks": 5100, "impressions": 284000 }
+          ]
+        },
+        {
+          "campaign": "UAE | ROAS | Sales", "adset": "AS — Lookalike 2% · Purchasers", "ad": null,
+          "spend": 680, "revenue": 2360, "roas": 3.47, "purchases": 19, "clicks": 7400, "impressions": 443000,
+          "children": [
+            { "campaign": "UAE | ROAS | Sales", "adset": "AS — Lookalike 2% · Purchasers", "ad": "Signature Set — Static", "spend": 680, "revenue": 2360, "roas": 3.47, "purchases": 19, "clicks": 7400, "impressions": 443000 }
+          ]
+        }
+      ]
+    },
+    {
+      "campaign": "KSA | Prospecting", "adset": null, "ad": null,
+      "spend": 620, "revenue": 1364, "roas": 2.2, "purchases": 14, "clicks": 8900, "impressions": 612000,
+      "children": [
+        {
+          "campaign": "KSA | Prospecting", "adset": "AS — Broad · 18–34", "ad": null,
+          "spend": 620, "revenue": 1364, "roas": 2.2, "purchases": 14, "clicks": 8900, "impressions": 612000,
+          "children": [
+            { "campaign": "KSA | Prospecting", "adset": "AS — Broad · 18–34", "ad": "Discovery Bundle — Reel", "spend": 360, "revenue": 792, "roas": 2.2, "purchases": 8, "clicks": 5200, "impressions": 358000 },
+            { "campaign": "KSA | Prospecting", "adset": "AS — Broad · 18–34", "ad": "Best Sellers — Carousel",  "spend": 260, "revenue": 572, "roas": 2.2, "purchases": 6, "clicks": 3700, "impressions": 254000 }
+          ]
+        }
+      ]
+    },
+    {
+      "campaign": "Nigeria | Top Funnel", "adset": null, "ad": null,
+      "spend": 290, "revenue": 0, "roas": 0.0, "purchases": 0, "clicks": 4100, "impressions": 388000,
+      "children": [
+        {
+          "campaign": "Nigeria | Top Funnel", "adset": "AS — Awareness · Lagos", "ad": null,
+          "spend": 290, "revenue": 0, "roas": 0.0, "purchases": 0, "clicks": 4100, "impressions": 388000,
+          "children": [
+            { "campaign": "Nigeria | Top Funnel", "adset": "AS — Awareness · Lagos", "ad": "Brand Film 30s — Reel", "spend": 290, "revenue": 0, "roas": 0.0, "purchases": 0, "clicks": 4100, "impressions": 388000 }
+          ]
+        }
+      ]
+    }
+  ],
+
+  "filters": {
+    "Source": ["All sources", "Meta", "Instagram", "Facebook", "Audience Network"],
+    "GEO": ["All GEOs", "United Arab Emirates", "Saudi Arabia", "Nigeria", "Kuwait", "Qatar"],
+    "Campaign Type": ["All types", "Sales", "Prospecting", "Top Funnel", "Retargeting"],
+    "Device": ["All devices", "Mobile", "Desktop", "Tablet"],
+    "Campaign": ["All campaigns", "UAE | ROAS | Sales", "KSA | Prospecting", "Nigeria | Top Funnel"],
+    "Adset": ["All adsets", "Women 25–44 · Dubai", "Lookalike 2% · Purchasers", "Broad · 18–34", "Awareness · Lagos"],
+    "Ad": ["All ads", "Oud Royale — Carousel", "Rose Absolu — Reel 15s", "Signature Set — Static", "Brand Film 30s — Reel"]
+  }
+}

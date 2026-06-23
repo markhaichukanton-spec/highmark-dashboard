@@ -30,7 +30,7 @@ function ChartTooltip({ active, payload, label, metas }) {
 }
 
 /* ── the single interactive time-series chart ─────────────── */
-function MetricChart({ data, selected, metas, scope }) {
+function MetricChart({ data, selected, metas }) {
   const ordered = selected.map((k) => metas[k]).filter(Boolean);
   const left = ordered.filter((m) => m.axis === 'left');
   const right = ordered.filter((m) => m.axis === 'right');
@@ -44,7 +44,7 @@ function MetricChart({ data, selected, metas, scope }) {
     <div className="chart-card">
       <div className="chart-head">
         <div>
-          <span className="chart-eyebrow">Daily · {selected.length} metric{selected.length === 1 ? '' : 's'}{scope ? ' · ' + scope : ''}</span>
+          <span className="chart-eyebrow">Daily · {selected.length} metric{selected.length === 1 ? '' : 's'}</span>
           <h3 className="chart-title">Performance over time</h3>
         </div>
         <div className="chart-legend">

@@ -21,8 +21,8 @@ const fmt = {
   ratio: (v) => v.toFixed(2),
   percent: (v) => v.toFixed(1) + '%',
   compact: (v) => {
-    if (v >= 1000) return (v / 1000).toFixed(v >= 10000 ? 0 : 1) + 'k';
-    return String(v);
+    if (Math.abs(v) >= 1000) return +(v / 1000).toFixed(v >= 10000 ? 0 : 1) + 'k';
+    return String(+v.toFixed(2)); // round to hundredths, strip trailing zeros
   },
 };
 
@@ -225,37 +225,36 @@ function entitySeries(node) {
   return rows.map(deriveDay);
 }
 
-// flatten the table into selectable entities, each with its own daily series
+// flatten the table into selectable entities, each with its own daily series.
+// Each entity has a UNIQUE key built from its ancestry (campaign▸adset▸ad) so
+// selection is per-row and never collides between same-named entities.
+const SEP = '\u0001';
+const eKey = (c, a, d) => [c, a, d].filter(Boolean).join(SEP);
+const levelOf = (key) => key.split(SEP).length; // 1=campaign, 2=adset, 3=ad
 const ENTITIES = [];
 TABLE.forEach((camp) => {
-  ENTITIES.push({ level: 'campaign', name: camp.campaign, campaign: camp.campaign, adset: null, ad: null, series: entitySeries(camp) });
+  ENTITIES.push({ level: 'campaign', key: eKey(camp.campaign), name: camp.campaign, campaign: camp.campaign, adset: null, ad: null, series: entitySeries(camp) });
   (camp.children || []).forEach((as) => {
-    ENTITIES.push({ level: 'adset', name: as.adset, campaign: camp.campaign, adset: as.adset, ad: null, series: entitySeries(as) });
+    ENTITIES.push({ level: 'adset', key: eKey(camp.campaign, as.adset), name: as.adset, campaign: camp.campaign, adset: as.adset, ad: null, series: entitySeries(as) });
     (as.children || []).forEach((ad) => {
-      ENTITIES.push({ level: 'ad', name: ad.ad, campaign: camp.campaign, adset: as.adset, ad: ad.ad, series: entitySeries(ad) });
+      ENTITIES.push({ level: 'ad', key: eKey(camp.campaign, as.adset, ad.ad), name: ad.ad, campaign: camp.campaign, adset: as.adset, ad: ad.ad, series: entitySeries(ad) });
     });
   });
 });
+const ENTITY_BY_KEY = Object.fromEntries(ENTITIES.map((e) => [e.key, e]));
+// name → keys (per level) for the filter dropdowns
+const NAME_TO_KEYS = { 1: {}, 2: {}, 3: {} };
+ENTITIES.forEach((e) => { const L = levelOf(e.key); (NAME_TO_KEYS[L][e.name] = NAME_TO_KEYS[L][e.name] || []).push(e.key); });
+const nameToKeys = (level, name) => (NAME_TO_KEYS[level] && NAME_TO_KEYS[level][name]) || [];
 
-// Combined daily series for the current Campaign/Adset/Ad selection. Most-
-// specific wins: an entity is included only if selected AND none of its
-// descendants are selected — so a campaign + one of its ads never double-counts.
-// Empty / all selection → the global series (all days, unscoped).
-function chartSeries(sel) {
-  const camps = new Set((sel.Campaign || []).filter((n) => n !== '\u0000'));
-  const adsets = new Set((sel.Adset || []).filter((n) => n !== '\u0000'));
-  const ads = new Set((sel.Ad || []).filter((n) => n !== '\u0000'));
-  if (!camps.size && !adsets.size && !ads.size) return SERIES;
-  const adSelInAdset = (adsetName) => ENTITIES.some((x) => x.level === 'ad' && x.adset === adsetName && ads.has(x.ad));
-  const subSelInCampaign = (campName) =>
-    ENTITIES.some((x) => x.level === 'adset' && x.campaign === campName && adsets.has(x.adset)) ||
-    ENTITIES.some((x) => x.level === 'ad' && x.campaign === campName && ads.has(x.ad));
-  const chosen = ENTITIES.filter((e) => {
-    if (e.level === 'ad') return ads.has(e.ad);
-    if (e.level === 'adset') return adsets.has(e.adset) && !adSelInAdset(e.adset);
-    if (e.level === 'campaign') return camps.has(e.campaign) && !subSelInCampaign(e.campaign);
-    return false;
-  });
+// Combined daily series for a set of selected entity KEYS. Most-specific wins:
+// a key is dropped if another selected key is its strict descendant (so a
+// campaign + one of its ads never double-counts). Empty → global series.
+function chartSeriesForKeys(keys) {
+  const set = (keys || []).filter((k) => k && k !== '\u0000');
+  if (!set.length) return SERIES;
+  const effective = set.filter((k) => !set.some((o) => o !== k && o.startsWith(k + SEP)));
+  const chosen = effective.map((k) => ENTITY_BY_KEY[k]).filter(Boolean);
   if (!chosen.length) return SERIES;
   const base = SERIES.map((d) => ({ period: d.period, label: d.label, spend: 0, revenue: 0, clicks: 0, purchases: 0, impressions: 0 }));
   chosen.forEach((e) => e.series.forEach((r, i) => RAW_KEYS.forEach((k) => { base[i][k] += r[k]; })));
@@ -280,5 +279,8 @@ const FILTERS = {
   Ad: ['All ads', ...AD_NAMES],
 };
 
-const DATA = { COLORS, KPIS, SERIES, TABLE, FILTERS, METRIC_META, GEO, GEO_COLORS, GEO_SERIES, ENTITIES, chartSeries };
+const DATA = {
+  COLORS, KPIS, SERIES, TABLE, FILTERS, METRIC_META, GEO, GEO_COLORS, GEO_SERIES,
+  ENTITIES, ENTITY_BY_KEY, chartSeriesForKeys, eKey, levelOf, nameToKeys, SEP,
+};
 Object.assign(window, { DATA, fmt, COLORS });

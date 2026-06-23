@@ -1,7 +1,7 @@
 'use client'
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { format, subDays } from 'date-fns'
-import { loadDashboard, exportUrl, type DashboardData, type DashboardFilterOptions } from '@/lib/dashboard-client'
+import { loadDashboard, exportUrl, chartSeries, type DashboardData, type DashboardFilterOptions } from '@/lib/dashboard-client'
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader'
 import { FilterBar } from '@/components/dashboard/FilterBar'
 import { Granularity } from '@/components/dashboard/Granularity'
@@ -43,6 +43,18 @@ export default function DashboardPage() {
 
   const resetFilters = useCallback(() => setFilterValues({}), [])
 
+  const toggleEntity = useCallback((levelKey: string, name: string) => {
+    setFilterValues((f) => {
+      const cur = (f[levelKey] || []).filter((n) => n !== ' ')
+      const next = cur.includes(name) ? cur.filter((n) => n !== name) : [...cur, name]
+      return { ...f, [levelKey]: next }
+    })
+  }, [])
+
+  const clearScope = useCallback(() => {
+    setFilterValues((f) => ({ ...f, Campaign: [], Adset: [], Ad: [] }))
+  }, [])
+
   const toggleMetric = useCallback((key: string) => {
     setSelected((cur) => {
       if (cur.includes(key)) {
@@ -68,52 +80,135 @@ export default function DashboardPage() {
     a.click()
   }, [range, filterValues])
 
-  // Scroll-linked KPI compaction — inline styles via lerp so it never stalls
-  // under Recharts' continuous work (CSS transitions on layout props would freeze)
+  // Scroll handler — binary tween (expanded ⇄ compact) with hysteresis.
+  // Per-pixel lerp caused scroll-anchoring jitter when the bar resized every frame.
+  // Now: cross a threshold once → one 220ms ease-out tween, then done.
+  // Compact state covers filters + KPI + granularity all at once.
+  // At the table: gran-bar collapses via .topbar.swap; thead pins at --kpi-bottom.
   useEffect(() => {
     const dash = document.querySelector('.dash') as HTMLElement | null
     const topbar = topbarRef.current
+    const head = document.querySelector('.dash-head') as HTMLElement | null
     const body = document.querySelector('.dash-body') as HTMLElement | null
-    if (!dash || !topbar || !body) return
-    const RANGE = 90
+    if (!dash || !topbar || !head || !body) return
+
     const lerp = (a: number, b: number, t: number) => a + (b - a) * t
-    const paint = () => {
-      const y = window.scrollY || document.documentElement.scrollTop || 0
-      const t = Math.min(1, Math.max(0, y / RANGE))
+
+    const filterBar = topbar.querySelector('.filter-bar') as HTMLElement | null
+    const fbTag     = topbar.querySelector('.fb-tag') as HTMLElement | null
+    const fbLabels  = [...topbar.querySelectorAll('.fb-fields .dd-lbl')] as HTMLElement[]
+    const fbSelects = [...topbar.querySelectorAll('.fb-fields .dd-field select, .fb-fields .ms-trigger')] as HTMLElement[]
+    const granBar   = topbar.querySelector('.gran-bar') as HTMLElement | null
+    const granLbl   = topbar.querySelector('.gran-lbl') as HTMLElement | null
+
+    const applyT = (t: number) => {
+      // filters: hide field labels, tighten padding
+      if (filterBar) { filterBar.style.paddingTop = lerp(11, 6, t) + 'px'; filterBar.style.paddingBottom = lerp(11, 6, t) + 'px' }
+      if (fbTag)     { fbTag.style.paddingBottom = lerp(10, 6, t) + 'px' }
+      fbLabels.forEach((l) => { l.style.maxHeight = lerp(14, 0, t) + 'px'; l.style.opacity = String(1 - t); l.style.marginBottom = lerp(5, 0, t) + 'px' })
+      fbSelects.forEach((s) => { const p = lerp(9, 6, t); s.style.paddingTop = p + 'px'; s.style.paddingBottom = p + 'px' })
+      // granularity: tighten
+      if (granBar) { granBar.style.paddingTop = lerp(8, 5, t) + 'px'; granBar.style.paddingBottom = lerp(9, 5, t) + 'px' }
+      if (granLbl) { granLbl.style.opacity = String(1 - t * 0.5) }
+      // KPI: hide "KEY METRICS" header, tighten cards (keep values readable)
       const block = topbar.querySelector('.kpi-block') as HTMLElement | null
-      const head  = topbar.querySelector('.kpi-block-head') as HTMLElement | null
-      if (block) { block.style.paddingTop = lerp(11, 8, t) + 'px'; block.style.paddingBottom = lerp(14, 8, t) + 'px' }
-      if (head)  { head.style.maxHeight = lerp(18, 0, t) + 'px'; head.style.opacity = String(1 - t); head.style.marginBottom = lerp(8, 0, t) + 'px' }
-      topbar.querySelectorAll('.kpi').forEach((c) => {
-        const el = c as HTMLElement; const p = lerp(9, 6, t)
-        el.style.paddingTop = p + 'px'; el.style.paddingBottom = p + 'px'
-      })
-      topbar.querySelectorAll('.kpi-value').forEach((v) => { (v as HTMLElement).style.fontSize = lerp(19, 15, t) + 'px' })
-      topbar.querySelectorAll('.kpi-sub').forEach((s) => {
-        const el = s as HTMLElement; el.style.maxHeight = lerp(16, 0, t) + 'px'; el.style.opacity = String(1 - t)
-      })
+      const khead = topbar.querySelector('.kpi-block-head') as HTMLElement | null
+      if (block) { block.style.paddingTop = lerp(9, 6, t) + 'px'; block.style.paddingBottom = lerp(11, 7, t) + 'px' }
+      if (khead) { khead.style.maxHeight = lerp(17, 0, t) + 'px'; khead.style.opacity = String(1 - t); khead.style.marginBottom = lerp(7, 0, t) + 'px' }
+      topbar.querySelectorAll('.kpi').forEach((c) => { const el = c as HTMLElement; const p = lerp(11, 8, t); el.style.paddingTop = p + 'px'; el.style.paddingBottom = p + 'px' })
+      topbar.querySelectorAll('.kpi-value').forEach((v) => { (v as HTMLElement).style.fontSize = lerp(16, 14.5, t) + 'px' })
+    }
+
+    // one-shot tween between 0 (expanded) and 1 (compact)
+    let rafId = 0
+    let timeoutId: ReturnType<typeof setTimeout> | null = null
+    let animFrom = 0, animTo = 0, animStart = 0
+    let tCurrent = 0
+    const DUR = 220
+    const ease = (x: number) => 1 - Math.pow(1 - x, 3)
+
+    const finalize = () => { tCurrent = animTo; applyT(animTo) }
+    const step = (now: number) => {
+      const p = Math.min(1, (now - animStart) / DUR)
+      tCurrent = animFrom + (animTo - animFrom) * ease(p)
+      applyT(tCurrent)
+      rafId = p < 1 ? requestAnimationFrame(step) : 0
+    }
+    const tweenTo = (target: number) => {
+      if (animTo === target && (rafId !== 0 || tCurrent === target)) return
+      animFrom = tCurrent; animTo = target; animStart = performance.now()
+      if (rafId) cancelAnimationFrame(rafId)
+      rafId = requestAnimationFrame(step)
+      if (timeoutId) clearTimeout(timeoutId)
+      timeoutId = setTimeout(finalize, DUR + 60)
+    }
+
+    // measure --head-h (slim header) and --topbar-ch (compact topbar + head + body-pad)
+    // and --kpi-bottom (where table thead should pin = bottom of KPI block)
+    const measure = () => {
+      const headH = Math.round(head.getBoundingClientRect().height)
+      dash.style.setProperty('--head-h', headH + 'px')
+      // measure compact height without transitions
+      dash.classList.add('no-anim')
+      applyT(1)
+      const compactTopbar = topbar.getBoundingClientRect().height
+      const fbH   = filterBar ? filterBar.getBoundingClientRect().height : 0
+      const kpiEl = topbar.querySelector('.kpi-block') as HTMLElement | null
+      const kpiH  = kpiEl ? kpiEl.getBoundingClientRect().height : 0
+      applyT(tCurrent)
+      void topbar.offsetWidth
+      dash.classList.remove('no-anim')
+      const padTop = parseFloat(getComputedStyle(body).paddingTop) || 0
+      dash.style.setProperty('--topbar-ch', Math.round(headH + compactTopbar + padTop) + 'px')
+      dash.style.setProperty('--kpi-bottom', Math.round(headH + fbH + kpiH) + 'px')
+    }
+
+    let compact = false
+    const onScroll = () => {
+      const y = window.scrollY || document.documentElement.scrollTop || 0
+      // hysteresis: expand requires scrolling back past 12px, compact triggers at 40px
+      const next = compact ? y > 12 : y > 40
+      if (next !== compact) { compact = next; tweenTo(compact ? 1 : 0) }
       topbar.classList.toggle('stuck', y > 6)
 
-      // Swap KPI bar ⇄ table header: when thead reaches the top, KPI slides away
+      // swap: when table thead reaches the KPI bar bottom, hide gran-bar so thead
+      // takes its visual slot. Filters + Key Metrics stay pinned above.
       const wide = dash.getBoundingClientRect().width >= 1025
-      const thead = dash.querySelector('.summary-table thead')
-      if (wide && thead) {
-        const theadTop = (thead as HTMLElement).getBoundingClientRect().top
-        const wasAway = topbar.classList.contains('away')
-        const away = wasAway ? theadTop <= 28 : theadTop <= 0.5
-        topbar.classList.toggle('away', away)
+      const thead = dash.querySelector('.summary-table thead') as HTMLElement | null
+      const kpiEl = topbar.querySelector('.kpi-block') as HTMLElement | null
+      if (wide && thead && kpiEl) {
+        const kpiBot = Math.round(kpiEl.getBoundingClientRect().bottom)
+        dash.style.setProperty('--kpi-bottom', kpiBot + 'px')
+        const theadTop = thead.getBoundingClientRect().top
+        const wasSwap = topbar.classList.contains('swap')
+        // hysteresis: un-swap only when thead pulls back 40px below the threshold
+        const swap = wasSwap ? theadTop <= kpiBot + 40 : theadTop <= kpiBot + 4
+        topbar.classList.toggle('swap', swap)
       } else {
-        topbar.classList.remove('away')
+        topbar.classList.remove('swap')
       }
-
-      const padTop = parseFloat(getComputedStyle(body).paddingTop) || 0
-      dash.style.setProperty('--topbar-ch', Math.round(topbar.getBoundingClientRect().height + padTop) + 'px')
     }
-    window.addEventListener('scroll', paint, { passive: true })
-    window.addEventListener('resize', paint, { passive: true })
-    paint()
-    if (document.fonts?.ready) document.fonts.ready.then(paint)
-    return () => { window.removeEventListener('scroll', paint); window.removeEventListener('resize', paint) }
+
+    applyT(0)
+    measure()
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('resize', measure,  { passive: true })
+    window.addEventListener('resize', onScroll, { passive: true })
+    if (document.fonts?.ready) document.fonts.ready.then(measure)
+
+    // Re-measure whenever topbar height changes (e.g. KPIRow renders after data loads)
+    const ro = new ResizeObserver(measure)
+    ro.observe(topbar)
+
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      window.removeEventListener('resize', measure)
+      window.removeEventListener('resize', onScroll)
+      ro.disconnect()
+      if (rafId) cancelAnimationFrame(rafId)
+      if (timeoutId) clearTimeout(timeoutId)
+    }
   }, [])
 
   useEffect(() => {
@@ -131,22 +226,30 @@ export default function DashboardPage() {
       .finally(() => setLoading(false))
   }, [range, gran, compare, filterValues])
 
-  const since = range.from
-  const until = range.to
+  const chartData = useMemo(() => {
+    if (!data) return []
+    return chartSeries(data.ENTITIES, data.SERIES, filterValues)
+  }, [data, filterValues])
+
+  const scopeNames = (['Campaign', 'Adset', 'Ad'] as const)
+    .flatMap((k) => (filterValues[k] || []).filter((v) => v !== ' '))
+  const scopeLabel = scopeNames.length === 0 ? ''
+    : scopeNames.length === 1 ? scopeNames[0]
+    : scopeNames.length + ' selected'
 
   return (
     <div className="dash">
-      {/* Header scrolls away freely — not part of the sticky topbar */}
+      {/* Slim header — always sticky at top:0 */}
       <DashboardHeader
-        since={since}
-        until={until}
+        since={range.from}
+        until={range.to}
         compare={compare}
         onCompare={setCompare}
         onDateChange={onDateChange}
         onExport={onExport}
       />
 
-      {/* Sticky topbar: FilterBar + KPI block pin together; KPI shrinks scroll-linked */}
+      {/* Sticky topbar: filters + KPI + granularity — all compact together on scroll */}
       <div className="topbar" ref={topbarRef}>
         <FilterBar filters={filters} values={filterValues} onChange={onFilter} onReset={resetFilters} />
         {data && (
@@ -157,6 +260,9 @@ export default function DashboardPage() {
             metas={data.METRIC_META}
           />
         )}
+        <div className="gran-bar">
+          <Granularity value={gran} onChange={setGran} />
+        </div>
       </div>
 
       <div className="dash-body">
@@ -172,15 +278,23 @@ export default function DashboardPage() {
           </div>
         ) : data ? (
           <>
-            <div className="overview">
-              <Granularity value={gran} onChange={setGran} />
-              <div className="analytics-grid">
-                <MetricChart data={data.SERIES} selected={selected} metas={data.METRIC_META} />
-                <GeoBar geoData={data.GEO} metas={data.METRIC_META} colors={data.GEO_COLORS} />
+            {/* chart-stage: taller than viewport by --stage-room, giving the sticky
+                .overview scroll distance to stay framed before releasing upward */}
+            <div className="chart-stage">
+              <div className="overview">
+                <div className="analytics-grid">
+                  <MetricChart data={chartData} selected={selected} metas={data.METRIC_META} scope={scopeLabel} />
+                  <GeoBar geoData={data.GEO} metas={data.METRIC_META} colors={data.GEO_COLORS} />
+                </div>
               </div>
             </div>
 
-            <SummaryTable rows={data.TABLE} />
+            <SummaryTable
+              rows={data.TABLE}
+              values={filterValues}
+              onToggleEntity={toggleEntity}
+              onClearScope={clearScope}
+            />
 
             <div className="dash-foot">
               <span>Data refreshed daily · Source: Meta Marketing API</span>

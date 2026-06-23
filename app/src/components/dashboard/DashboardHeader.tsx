@@ -26,10 +26,7 @@ export function DashboardHeader({ since, until, compare, onCompare, onDateChange
       <div className="head-left">
         <span className="hm-logo">High<span className="slash">/</span>Mark</span>
         <span className="head-div" />
-        <div className="head-titles">
-          <div className="eyebrow">Aurora Scents · Meta Ads</div>
-          <h1 className="head-h1">Performance Overview</h1>
-        </div>
+        <span className="head-title-inline">Performance Overview</span>
       </div>
       <div className="head-right">
         <DateRangePicker since={since} until={until} onApply={onDateChange} />

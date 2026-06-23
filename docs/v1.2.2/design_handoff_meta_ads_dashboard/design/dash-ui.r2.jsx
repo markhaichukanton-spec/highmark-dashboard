@@ -247,26 +247,13 @@ const COLDEFS = [
   { key: 'impressions', label: 'Impr.', align: 'right', fmt: (v) => fmt.compact(v) },
 ];
 
-const LEVEL_KEY = ['Campaign', 'Adset', 'Ad'];
-
-function TableRow({ node, depth, label, expanded, onToggle, path, values, onToggleEntity }) {
+function TableRow({ node, depth, label, expanded, onToggle, path }) {
   const hasKids = node.children && node.children.length > 0;
   const isOpen = expanded[path];
-  const levelKey = LEVEL_KEY[depth];
-  const sel = (values && values[levelKey]) || [];
-  const checked = sel.includes(label);
   return (
     <React.Fragment>
-      <tr className={'tr-d' + depth + (checked ? ' tr-sel' : '')}>
+      <tr className={'tr-d' + depth}>
         <td className="tcell-name" style={{ paddingLeft: 16 + depth * 22 }}>
-          <button
-            className={'row-check' + (checked ? ' on' : '')}
-            onClick={() => onToggleEntity(levelKey, label)}
-            aria-label={checked ? 'remove from chart' : 'show on chart'}
-            title={checked ? 'Plotted on chart — click to remove' : 'Plot only this on the chart'}
-          >
-            {checked && <svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M5 12l4 4 10-10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /></svg>}
-          </button>
           {hasKids ? (
             <button className={'twist' + (isOpen ? ' open' : '')} onClick={() => onToggle(path)} aria-label="toggle">
               <svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
@@ -284,22 +271,18 @@ function TableRow({ node, depth, label, expanded, onToggle, path, values, onTogg
         const childLabel = depth === 0 ? child.adset : child.ad;
         return (
           <TableRow key={path + '-' + i} node={child} depth={depth + 1}
-            label={childLabel} expanded={expanded} onToggle={onToggle} path={path + '-' + i}
-            values={values} onToggleEntity={onToggleEntity} />
+            label={childLabel} expanded={expanded} onToggle={onToggle} path={path + '-' + i} />
         );
       })}
     </React.Fragment>
   );
 }
 
-function SummaryTable({ rows, values, onToggleEntity, onClearScope }) {
+function SummaryTable({ rows }) {
   const [sort, setSort] = useState({ key: 'spend', dir: 'desc' });
   const [expanded, setExpanded] = useState({ '0': true }); // first campaign open
 
   const toggle = useCallback((p) => setExpanded((e) => ({ ...e, [p]: !e[p] })), []);
-
-  const scopeCount = ['Campaign', 'Adset', 'Ad']
-    .reduce((n, k) => n + ((values && values[k]) || []).filter((v) => v !== '\u0000').length, 0);
 
   const sorted = useMemo(() => {
     const arr = [...rows];
@@ -318,15 +301,7 @@ function SummaryTable({ rows, values, onToggleEntity, onClearScope }) {
     <div className="table-card">
       <div className="table-head-bar">
         <h2 className="table-title">Campaign breakdown</h2>
-        {scopeCount > 0 ? (
-          <span className="table-scope">
-            <span className="scope-dot" />
-            {scopeCount} selected on chart
-            <button className="scope-clear" onClick={onClearScope}>Clear</button>
-          </span>
-        ) : (
-          <span className="table-hint">Tick a row to plot only it on the chart</span>
-        )}
+        <span className="table-hint">Click a row to drill into adsets &amp; ads</span>
       </div>
       <div className="table-scroll">
         <table className="summary-table">
@@ -348,8 +323,7 @@ function SummaryTable({ rows, values, onToggleEntity, onClearScope }) {
           <tbody>
             {sorted.map((node, i) => (
               <TableRow key={i} node={node} depth={0} label={node.campaign}
-                expanded={expanded} onToggle={toggle} path={String(i)}
-                values={values} onToggleEntity={onToggleEntity} />
+                expanded={expanded} onToggle={toggle} path={String(i)} />
             ))}
           </tbody>
         </table>

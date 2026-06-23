@@ -20,7 +20,8 @@ export const fmt = {
   percent:   (v: number) => v.toFixed(1) + '%',
   compact:   (v: number) => {
     if (v >= 1000) return (v / 1000).toFixed(v >= 10000 ? 0 : 1) + 'k'
-    return String(v)
+    // sub-1000: round to 2 decimals, drop trailing zeros (no ".00" on integers)
+    return String(Math.round(v * 100) / 100)
   },
 }
 

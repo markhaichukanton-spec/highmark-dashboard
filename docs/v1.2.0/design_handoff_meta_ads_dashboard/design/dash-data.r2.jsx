@@ -180,105 +180,16 @@ const TABLE = [
   },
 ];
 
-// ── per-entity daily series (campaign / adset / ad) ─────────
-// Source has only entity TOTALS (the table rows), no real daily split. We spread
-// each entity's raw totals across the 7 days following the overall daily shape
-// (per raw metric) with a small deterministic wobble, then renormalise so each
-// entity's 7-day sum equals its known total. Derived metrics recomputed from the
-// summed raw fields. Lets the chart show only the rows the user selects.
-const RAW_KEYS = ['spend', 'revenue', 'clicks', 'purchases', 'impressions'];
-function deriveDay(d) {
-  return {
-    period: d.period, label: d.label,
-    spend: d.spend, revenue: d.revenue, clicks: d.clicks, purchases: d.purchases, impressions: d.impressions,
-    roas: d.spend ? +(d.revenue / d.spend).toFixed(2) : 0,
-    cr:   d.clicks ? +((d.purchases / d.clicks) * 100).toFixed(2) : 0,
-    ctr:  d.impressions ? +((d.clicks / d.impressions) * 100).toFixed(2) : 0,
-    cpc:  d.clicks ? +(d.spend / d.clicks).toFixed(2) : 0,
-    cpm:  d.impressions ? +((d.spend / d.impressions) * 1000).toFixed(2) : 0,
-    cpo:  d.purchases ? +(d.spend / d.purchases).toFixed(2) : 0,
-    aov:  d.purchases ? +(d.revenue / d.purchases).toFixed(2) : 0,
-  };
-}
-const _dayShare = {};
-RAW_KEYS.forEach((k) => {
-  const totals = SERIES.map((d) => d[k]);
-  const sum = totals.reduce((a, b) => a + b, 0) || 1;
-  _dayShare[k] = totals.map((v) => v / sum);
-});
-let _entSeed = 0;
-function entitySeries(node) {
-  const ci = _entSeed++;
-  const rows = SERIES.map((d, di) => {
-    const p = { period: d.period, label: d.label };
-    RAW_KEYS.forEach((k) => {
-      const wobble = 1 + 0.18 * Math.sin(di * 1.3 + ci * 1.9);
-      p[k] = (node[k] || 0) * _dayShare[k][di] * wobble;
-    });
-    return p;
-  });
-  RAW_KEYS.forEach((k) => {
-    const colSum = rows.reduce((a, r) => a + r[k], 0) || 1;
-    const scale = (node[k] || 0) / colSum;
-    rows.forEach((r) => { r[k] = Math.round(r[k] * scale); });
-  });
-  return rows.map(deriveDay);
-}
-
-// flatten the table into selectable entities, each with its own daily series
-const ENTITIES = [];
-TABLE.forEach((camp) => {
-  ENTITIES.push({ level: 'campaign', name: camp.campaign, campaign: camp.campaign, adset: null, ad: null, series: entitySeries(camp) });
-  (camp.children || []).forEach((as) => {
-    ENTITIES.push({ level: 'adset', name: as.adset, campaign: camp.campaign, adset: as.adset, ad: null, series: entitySeries(as) });
-    (as.children || []).forEach((ad) => {
-      ENTITIES.push({ level: 'ad', name: ad.ad, campaign: camp.campaign, adset: as.adset, ad: ad.ad, series: entitySeries(ad) });
-    });
-  });
-});
-
-// Combined daily series for the current Campaign/Adset/Ad selection. Most-
-// specific wins: an entity is included only if selected AND none of its
-// descendants are selected — so a campaign + one of its ads never double-counts.
-// Empty / all selection → the global series (all days, unscoped).
-function chartSeries(sel) {
-  const camps = new Set((sel.Campaign || []).filter((n) => n !== '\u0000'));
-  const adsets = new Set((sel.Adset || []).filter((n) => n !== '\u0000'));
-  const ads = new Set((sel.Ad || []).filter((n) => n !== '\u0000'));
-  if (!camps.size && !adsets.size && !ads.size) return SERIES;
-  const adSelInAdset = (adsetName) => ENTITIES.some((x) => x.level === 'ad' && x.adset === adsetName && ads.has(x.ad));
-  const subSelInCampaign = (campName) =>
-    ENTITIES.some((x) => x.level === 'adset' && x.campaign === campName && adsets.has(x.adset)) ||
-    ENTITIES.some((x) => x.level === 'ad' && x.campaign === campName && ads.has(x.ad));
-  const chosen = ENTITIES.filter((e) => {
-    if (e.level === 'ad') return ads.has(e.ad);
-    if (e.level === 'adset') return adsets.has(e.adset) && !adSelInAdset(e.adset);
-    if (e.level === 'campaign') return camps.has(e.campaign) && !subSelInCampaign(e.campaign);
-    return false;
-  });
-  if (!chosen.length) return SERIES;
-  const base = SERIES.map((d) => ({ period: d.period, label: d.label, spend: 0, revenue: 0, clicks: 0, purchases: 0, impressions: 0 }));
-  chosen.forEach((e) => e.series.forEach((r, i) => RAW_KEYS.forEach((k) => { base[i][k] += r[k]; })));
-  return base.map(deriveDay);
-}
-
 // ── filter options ──────────────────────────────────────────
-// Campaign / Adset / Ad options are generated from the table so the filter
-// dropdowns and the table-row checkboxes share the exact same entity names
-// (bidirectional selection sync).
-const CAMP_NAMES = TABLE.map((c) => c.campaign);
-const ADSET_NAMES = [...new Set(TABLE.flatMap((c) => (c.children || []).map((a) => a.adset)))];
-const AD_NAMES = [...new Set(TABLE.flatMap((c) => (c.children || []).flatMap((a) => (a.children || []).map((d) => d.ad))))];
-
 const FILTERS = {
   Source: ['All sources', 'Meta', 'Instagram', 'Facebook', 'Audience Network'],
   GEO: ['All GEOs', 'United Arab Emirates', 'Saudi Arabia', 'Nigeria', 'Kuwait', 'Qatar'],
   'Campaign Type': ['All types', 'Sales', 'Prospecting', 'Top Funnel', 'Retargeting'],
   Device: ['All devices', 'Mobile', 'Desktop', 'Tablet'],
-  Campaign: ['All campaigns', ...CAMP_NAMES],
-  Adset: ['All adsets', ...ADSET_NAMES],
-  Ad: ['All ads', ...AD_NAMES],
+  Campaign: ['All campaigns', 'UAE | ROAS | Sales', 'KSA | Prospecting', 'Nigeria | Top Funnel'],
+  Adset: ['All adsets', 'Women 25–44 · Dubai', 'Lookalike 2% · Purchasers', 'Broad · 18–34', 'Awareness · Lagos'],
+  Ad: ['All ads', 'Oud Royale — Carousel', 'Rose Absolu — Reel 15s', 'Signature Set — Static', 'Brand Film 30s — Reel'],
 };
 
-const DATA = { COLORS, KPIS, SERIES, TABLE, FILTERS, METRIC_META, GEO, GEO_COLORS, GEO_SERIES, ENTITIES, chartSeries };
+const DATA = { COLORS, KPIS, SERIES, TABLE, FILTERS, METRIC_META, GEO, GEO_COLORS, GEO_SERIES };
 Object.assign(window, { DATA, fmt, COLORS });

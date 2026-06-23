@@ -115,10 +115,7 @@ function Header({ since, until, compare, onCompare }) {
       <div className="head-left">
         <Logo />
         <span className="head-div" />
-        <div className="head-titles">
-          <div className="eyebrow">Aurora Scents · Meta Ads</div>
-          <h1 className="head-h1">Performance Overview</h1>
-        </div>
+        <span className="head-title-inline">Performance Overview</span>
       </div>
       <div className="head-right">
         <div className="daterange">
@@ -184,24 +181,22 @@ function DeltaArrow({ up }) {
 }
 
 function KPICard({ k, color, selected, onToggle }) {
-  // colored purely by direction: up = green, down = red
   const positive = k.up;
   return (
     <button type="button" className={'kpi' + (selected ? ' sel' : '')}
       style={selected ? { '--mc': color } : undefined}
       onClick={onToggle} aria-pressed={selected}>
       <span className="kpi-accent" />
-      <div className="kpi-top">
-        <span className="kpi-label">
-          <span className="kpi-dot" style={{ borderColor: color, background: selected ? color : 'transparent' }} />
-          {k.label}
-        </span>
+      <span className="kpi-label">
+        <span className="kpi-dot" style={{ borderColor: color, background: selected ? color : 'transparent' }} />
+        <span className="kpi-label-txt">{k.label}</span>
+      </span>
+      <span className="kpi-right">
+        <span className="kpi-value">{k.value}</span>
         <span className={'kpi-delta ' + (positive ? 'good' : 'bad')}>
           <DeltaArrow up={k.up} />{k.delta.replace(/^[+\-]/, '')}
         </span>
-      </div>
-      <div className="kpi-value">{k.value}</div>
-      <div className="kpi-sub">{k.sub}</div>
+      </span>
     </button>
   );
 }
@@ -249,21 +244,25 @@ const COLDEFS = [
 
 const LEVEL_KEY = ['Campaign', 'Adset', 'Ad'];
 
-function TableRow({ node, depth, label, expanded, onToggle, path, values, onToggleEntity }) {
+function TableRow({ node, depth, label, expanded, onToggle, path, rowKey, parentKeys, selectedKeys, onToggleKey, anySelected }) {
   const hasKids = node.children && node.children.length > 0;
   const isOpen = expanded[path];
-  const levelKey = LEVEL_KEY[depth];
-  const sel = (values && values[levelKey]) || [];
-  const checked = sel.includes(label);
+  const checked = selectedKeys.has(rowKey);
+  // a row is "active" (not dimmed) when nothing is selected, or it is on the
+  // path of a selection: itself selected, an ancestor of a selected row, or a
+  // descendant of a selected row. Unrelated rows dim.
+  const onAncestorPath = [...selectedKeys].some((k) => k.startsWith(rowKey + DATA.SEP));
+  const onDescendantPath = parentKeys.some((pk) => selectedKeys.has(pk));
+  const active = !anySelected || checked || onAncestorPath || onDescendantPath;
   return (
     <React.Fragment>
-      <tr className={'tr-d' + depth + (checked ? ' tr-sel' : '')}>
+      <tr className={'tr-d' + depth + (checked ? ' tr-sel' : '') + (anySelected && !active ? ' tr-dim' : '')}>
         <td className="tcell-name" style={{ paddingLeft: 16 + depth * 22 }}>
           <button
             className={'row-check' + (checked ? ' on' : '')}
-            onClick={() => onToggleEntity(levelKey, label)}
+            onClick={() => onToggleKey(rowKey)}
             aria-label={checked ? 'remove from chart' : 'show on chart'}
-            title={checked ? 'Plotted on chart — click to remove' : 'Plot only this on the chart'}
+            title={checked ? 'Plotted on chart — click to remove' : 'Plot only this row on the chart'}
           >
             {checked && <svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M5 12l4 4 10-10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /></svg>}
           </button>
@@ -282,24 +281,26 @@ function TableRow({ node, depth, label, expanded, onToggle, path, values, onTogg
       </tr>
       {hasKids && isOpen && node.children.map((child, i) => {
         const childLabel = depth === 0 ? child.adset : child.ad;
+        const childKey = rowKey + DATA.SEP + childLabel;
         return (
           <TableRow key={path + '-' + i} node={child} depth={depth + 1}
             label={childLabel} expanded={expanded} onToggle={onToggle} path={path + '-' + i}
-            values={values} onToggleEntity={onToggleEntity} />
+            rowKey={childKey} parentKeys={[...parentKeys, rowKey]}
+            selectedKeys={selectedKeys} onToggleKey={onToggleKey} anySelected={anySelected} />
         );
       })}
     </React.Fragment>
   );
 }
 
-function SummaryTable({ rows, values, onToggleEntity, onClearScope }) {
+function SummaryTable({ rows, selectedKeys, onToggleKey, onClearScope }) {
   const [sort, setSort] = useState({ key: 'spend', dir: 'desc' });
   const [expanded, setExpanded] = useState({ '0': true }); // first campaign open
 
   const toggle = useCallback((p) => setExpanded((e) => ({ ...e, [p]: !e[p] })), []);
 
-  const scopeCount = ['Campaign', 'Adset', 'Ad']
-    .reduce((n, k) => n + ((values && values[k]) || []).filter((v) => v !== '\u0000').length, 0);
+  const scopeCount = selectedKeys.size;
+  const anySelected = scopeCount > 0;
 
   const sorted = useMemo(() => {
     const arr = [...rows];
@@ -318,10 +319,10 @@ function SummaryTable({ rows, values, onToggleEntity, onClearScope }) {
     <div className="table-card">
       <div className="table-head-bar">
         <h2 className="table-title">Campaign breakdown</h2>
-        {scopeCount > 0 ? (
+        {anySelected ? (
           <span className="table-scope">
             <span className="scope-dot" />
-            {scopeCount} selected on chart
+            {scopeCount} row{scopeCount === 1 ? '' : 's'} on chart
             <button className="scope-clear" onClick={onClearScope}>Clear</button>
           </span>
         ) : (
@@ -349,7 +350,8 @@ function SummaryTable({ rows, values, onToggleEntity, onClearScope }) {
             {sorted.map((node, i) => (
               <TableRow key={i} node={node} depth={0} label={node.campaign}
                 expanded={expanded} onToggle={toggle} path={String(i)}
-                values={values} onToggleEntity={onToggleEntity} />
+                rowKey={node.campaign} parentKeys={[]}
+                selectedKeys={selectedKeys} onToggleKey={onToggleKey} anySelected={anySelected} />
             ))}
           </tbody>
         </table>

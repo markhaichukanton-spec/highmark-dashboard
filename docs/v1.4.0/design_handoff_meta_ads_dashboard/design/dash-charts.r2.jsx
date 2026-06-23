@@ -62,11 +62,11 @@ function MetricChart({ data, selected, metas, scope }) {
             <XAxis dataKey="label" tick={AX} tickLine={false} axisLine={{ stroke: 'rgba(20,18,30,0.14)' }} dy={6} />
             {useLeft && (
               <YAxis yAxisId="left" tick={AX} tickLine={false} axisLine={false} width={46}
-                tickFormatter={(v) => v >= 1000 ? (v / 1000) + 'k' : v} />
+                tickFormatter={(v) => v >= 1000 ? +(v / 1000).toFixed(2) + 'k' : +v.toFixed(2)} />
             )}
             {useRight && (
               <YAxis yAxisId="right" orientation="right" tick={AX} tickLine={false} axisLine={false} width={40}
-                tickFormatter={(v) => Number.isInteger(v) ? v : v.toFixed(1)} />
+                tickFormatter={(v) => Number.isInteger(v) ? v : +v.toFixed(2)} />
             )}
             <Tooltip content={<ChartTooltip metas={metas} />} cursor={{ fill: 'rgba(20,18,30,0.04)' }} />
             {left.map((m) => (

@@ -29,20 +29,19 @@ function KPICard({ k, color, selected, onToggle }: KPICardProps) {
       aria-pressed={selected}
     >
       <span className="kpi-accent" />
-      <div className="kpi-top">
-        <span className="kpi-label">
-          <span
-            className="kpi-dot"
-            style={{ borderColor: color, background: selected ? color : 'transparent' }}
-          />
-          {k.label}
-        </span>
+      <span className="kpi-label">
+        <span
+          className="kpi-dot"
+          style={{ borderColor: color, background: selected ? color : 'transparent' }}
+        />
+        <span className="kpi-label-txt">{k.label}</span>
+      </span>
+      <span className="kpi-right">
+        <span className="kpi-value">{k.value}</span>
         <span className={'kpi-delta ' + (k.up ? 'good' : 'bad')}>
           <DeltaArrow up={k.up} />{k.delta.replace(/^[+-]/, '')}
         </span>
-      </div>
-      <div className="kpi-value">{k.value}</div>
-      <div className="kpi-sub">{k.sub}</div>
+      </span>
     </button>
   )
 }

@@ -50,3 +50,9 @@ app/node_modules/
 .vscode/
 .idea/
 *.swp
+
+# Playwright MCP session artifacts
+.playwright-mcp/
+
+# Screenshots (regeneratable, kept out of repo like other image assets)
+assets/screenshots/

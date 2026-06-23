@@ -23,30 +23,28 @@
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { background: var(--bg); }
+html, body { background: var(--bg); overflow-anchor: none; }
 body { font-family: var(--sans); color: var(--ink); -webkit-font-smoothing: antialiased; line-height: 1.5; }
 ::selection { background: var(--gold); color: #15110A; }
 .eyebrow { font-family: var(--mono); font-size: 10px; letter-spacing: .2em; text-transform: uppercase; color: var(--gold-deep); }
 
 .dash { width: 1440px; max-width: 100%; margin: 0 auto; min-height: 100vh; background: var(--bg); container-type: inline-size; container-name: dash; }
 
-/* ── STICKY TOPBAR (FilterBar + KPI pin; Header scrolls away above) ── */
-.topbar { position: sticky; top: 0; z-index: 30; box-shadow: 0 0 0 rgba(20,18,30,0); transition: box-shadow .25s, transform .3s cubic-bezier(.4,0,.1,1), opacity .26s; }
-.topbar.away { transform: translateY(-114%); opacity: 0; pointer-events: none; }
-.topbar.stuck { box-shadow: 0 10px 24px -16px rgba(20,18,30,.28); }
+/* kill transitions while measuring compact/full heights */
+.dash.no-anim, .dash.no-anim * { transition: none !important; }
 
-/* ── HEADER ── */
-.dash-head { position: relative; z-index: 40; background: #F4F0E6; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; padding: 22px 32px; backdrop-filter: blur(6px); transition: padding .22s cubic-bezier(.4,0,.1,1); }
-.head-left { display: flex; align-items: center; gap: 20px; }
-.hm-logo { font-family: var(--serif); font-weight: 600; font-size: 26px; letter-spacing: -.02em; color: var(--ink); line-height: 1; transition: font-size .22s cubic-bezier(.4,0,.1,1); }
+/* ── SLIM HEADER — ALWAYS sticky (logotype, period, compare, export) ── */
+.dash-head { position: sticky; top: 0; z-index: 40; background: #F4F0E6; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 9px 32px; backdrop-filter: blur(6px); }
+.head-left { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.hm-logo { font-family: var(--serif); font-weight: 600; font-size: 20px; letter-spacing: -.02em; color: var(--ink); line-height: 1; }
 .hm-logo .slash { color: var(--gold); }
-.head-div { width: 1px; height: 34px; background: var(--line-2); transition: height .22s; }
-.head-titles { overflow: hidden; }
-.head-titles .eyebrow { display: block; margin-bottom: 3px; max-height: 16px; opacity: 1; transition: max-height .22s, opacity .18s, margin .22s; }
-.head-h1 { font-family: var(--serif); font-weight: 500; font-size: 23px; letter-spacing: -.01em; line-height: 1; transition: font-size .22s cubic-bezier(.4,0,.1,1); }
-.head-right { display: flex; align-items: center; gap: 12px; }
+.head-div { width: 1px; height: 22px; background: var(--line-2); }
+.head-title-inline { font-family: var(--serif); font-weight: 500; font-size: 16px; letter-spacing: -.01em; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.head-right { display: flex; align-items: center; gap: 10px; }
+
+/* ── DATE RANGE (slim pill in header) ── */
 .drp { position: relative; }
-.daterange { display: flex; align-items: center; gap: 9px; font-family: var(--mono); font-size: 12px; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 9px; padding: 9px 13px; cursor: pointer; transition: .15s; }
+.daterange { display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 11.5px; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 6px 11px; cursor: pointer; transition: .15s; }
 .daterange:hover { border-color: var(--line-2); }
 .drp.open .daterange { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(201,168,76,.16); }
 .daterange svg { color: var(--muted); }
@@ -63,9 +61,15 @@ body { font-family: var(--sans); color: var(--ink); -webkit-font-smoothing: anti
 .drp-field input:focus { outline: none; border-color: var(--gold); }
 .drp-apply { font-family: var(--sans); font-weight: 600; font-size: 12.5px; color: #fff; background: var(--gold-deep); border: 1px solid var(--gold-deep); border-radius: 7px; padding: 8px 12px; cursor: pointer; transition: .14s; }
 .drp-apply:hover { background: var(--ink); border-color: var(--ink); }
-.export-btn { display: inline-flex; align-items: center; gap: 7px; font-family: var(--sans); font-weight: 600; font-size: 12.5px; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 9px; padding: 9px 14px; cursor: pointer; transition: .15s; }
+.export-btn { display: inline-flex; align-items: center; gap: 7px; font-family: var(--sans); font-weight: 600; font-size: 12px; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; cursor: pointer; transition: .15s; }
 .export-btn:hover { border-color: var(--line-2); box-shadow: 0 4px 12px -6px rgba(20,18,30,.18); }
 .export-btn svg { color: var(--gold-deep); }
+
+/* ── STICKY TOPBAR (filters + KPI + Granularity — pins below slim header) ── */
+.topbar { position: sticky; top: var(--head-h, 52px); z-index: 30; box-shadow: 0 0 0 rgba(20,18,30,0); transition: box-shadow .25s; }
+.topbar.stuck { box-shadow: 0 10px 24px -16px rgba(20,18,30,.28); }
+/* when table reaches the bar, gran-bar collapses and table thead takes its place */
+.topbar.swap .gran-bar { display: none; }
 
 /* ── DROPDOWN ── */
 .dd { display: inline-flex; flex-direction: column; gap: 5px; }
@@ -108,7 +112,7 @@ body { font-family: var(--sans); color: var(--ink); -webkit-font-smoothing: anti
 .ms-empty { padding: 16px 10px; text-align: center; font-family: var(--mono); font-size: 11px; color: var(--muted); }
 
 /* ── FILTER BAR ── */
-.filter-bar { background: var(--cream); border-bottom: 1px solid var(--line); display: flex; align-items: flex-end; gap: 18px; padding: 16px 32px; transition: padding .22s cubic-bezier(.4,0,.1,1); }
+.filter-bar { background: var(--cream); border-bottom: 1px solid var(--line); display: flex; align-items: flex-end; gap: 18px; padding: 11px 32px; transition: padding .22s cubic-bezier(.4,0,.1,1); }
 .fb-tag { font-family: var(--mono); font-size: 10px; letter-spacing: .2em; text-transform: uppercase; color: var(--gold-deep); padding-bottom: 10px; transition: padding .22s; }
 .fb-fields { display: flex; gap: 12px; flex-wrap: nowrap; flex: 1; min-width: 0; }
 .fb-fields .dd { flex: 1 1 0; min-width: 0; }
@@ -123,34 +127,38 @@ body { font-family: var(--sans); color: var(--ink); -webkit-font-smoothing: anti
 .dash-body { padding: 26px 32px 48px; }
 .section-gap { margin-top: 26px; }
 
-/* ── KPI BLOCK ── */
-.kpi-block { background: var(--cream); border-bottom: 1px solid var(--line); padding: 11px 32px 14px; }
-.kpi-block-head { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; max-height: 18px; opacity: 1; margin-bottom: 8px; overflow: hidden; }
+/* ── KPI BLOCK ──
+   Base = EXPANDED. Compaction driven by JS binary tween (NOT CSS transitions — they
+   stall under Recharts' continuous work on the main thread). */
+.kpi-block { background: var(--cream); padding: 9px 32px 11px; }
+.kpi-block-head { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; max-height: 17px; opacity: 1; margin-bottom: 7px; overflow: hidden; }
 .kpi-hint { font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
 .kpi-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 9px; }
-.kpi { position: relative; overflow: hidden; background: var(--paper); border: 1px solid var(--line); border-radius: 11px; padding: 9px 13px 10px; box-shadow: 0 1px 2px rgba(20,18,30,.04); transition: border-color .16s, box-shadow .16s, transform .16s; display: flex; flex-direction: column; gap: 3px; cursor: pointer; text-align: left; font: inherit; color: inherit; width: 100%; }
+.kpi { position: relative; overflow: hidden; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 11px 14px; box-shadow: 0 1px 2px rgba(20,18,30,.04); transition: border-color .16s, box-shadow .16s, transform .16s; display: flex; flex-direction: row; align-items: center; justify-content: space-between; gap: 10px; cursor: pointer; text-align: left; font: inherit; color: inherit; width: 100%; }
 .kpi:hover { border-color: var(--line-2); box-shadow: 0 8px 18px -14px rgba(20,18,30,.28); transform: translateY(-1px); }
 .kpi.sel { border-color: var(--mc); box-shadow: 0 0 0 1px var(--mc) inset, 0 8px 20px -14px rgba(20,18,30,.3); }
-.kpi-accent { position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--mc); opacity: 0; transition: .16s; }
+.kpi-accent { position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--mc); opacity: 0; transition: opacity .16s; }
 .kpi.sel .kpi-accent { opacity: 1; }
-.kpi-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.kpi-label { display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 9.5px; letter-spacing: .13em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+.kpi-label { display: inline-flex; align-items: center; gap: 7px; font-family: var(--mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); white-space: nowrap; min-width: 0; }
+.kpi-label-txt { white-space: nowrap; }
 .kpi-dot { width: 8px; height: 8px; border-radius: 2px; border: 1.5px solid; flex: 0 0 auto; transition: .16s; }
-.kpi-delta { display: inline-flex; align-items: center; gap: 2px; font-family: var(--sans); font-weight: 600; font-size: 10.5px; padding: 2px 6px; border-radius: 999px; line-height: 1; }
+.kpi-right { display: flex; align-items: baseline; gap: 7px; flex: 0 0 auto; }
+.kpi-delta { display: inline-flex; align-items: center; gap: 1px; font-family: var(--sans); font-weight: 600; font-size: 10px; padding: 1px 5px; border-radius: 999px; line-height: 1; flex: 0 0 auto; }
 .kpi-delta.good { background: var(--good-bg); color: var(--good-ink); }
 .kpi-delta.bad { background: var(--bad-bg); color: var(--bad-ink); }
-.kpi-value { font-family: var(--mono); font-weight: 500; font-size: 19px; letter-spacing: -.01em; color: var(--ink); line-height: 1.05; margin-top: 1px; white-space: nowrap; }
-.kpi-sub { font-family: var(--sans); font-size: 10px; color: var(--muted); line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-height: 16px; opacity: 1; }
+.kpi-value { font-family: var(--mono); font-weight: 500; font-size: 16px; letter-spacing: -.02em; color: var(--ink); line-height: 1.05; white-space: nowrap; }
+.kpi-sub { display: none; }
 
-/* ── GRANULARITY ── */
-.gran { display: flex; align-items: center; gap: 12px; margin: 8px 0 6px; }
+/* ── GRANULARITY (pinned inside sticky topbar, below Key Metrics) ── */
+.gran-bar { background: var(--cream); border-bottom: 1px solid var(--line); padding: 8px 32px 9px; }
+.gran { display: flex; align-items: center; gap: 12px; }
 .gran-lbl { font-family: var(--mono); font-size: 9.5px; letter-spacing: .2em; text-transform: uppercase; color: var(--gold-deep); }
 .seg { display: inline-flex; background: var(--cream); border: 1px solid var(--line); border-radius: 9px; padding: 2px; gap: 2px; }
 .seg-btn { font-family: var(--sans); font-size: 12px; font-weight: 500; color: var(--muted); background: transparent; border: 0; border-radius: 7px; padding: 5px 13px; cursor: pointer; transition: .14s; }
 .seg-btn:hover { color: var(--ink); }
 .seg-btn.on { background: var(--paper); color: var(--ink); box-shadow: 0 1px 3px rgba(20,18,30,.12); font-weight: 600; }
 
-/* ── ANALYTICS GRID ── */
+/* ── ANALYTICS GRID (chart 80% · geo bars 20%) ── */
 .analytics-grid { display: grid; grid-template-columns: 4fr 1fr; gap: 14px; align-items: stretch; }
 .analytics-grid > * { min-width: 0; }
 .chart-card { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 18px 18px 12px; box-shadow: 0 1px 2px rgba(20,18,30,.04); display: flex; flex-direction: column; }
@@ -192,7 +200,12 @@ body { font-family: var(--sans); color: var(--ink); -webkit-font-smoothing: anti
 .summary-table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: auto; }
 /* numeric columns shrink to content; name column absorbs the rest and wraps */
 .summary-table th.th-right, .summary-table td.tcell-num { width: 1%; white-space: nowrap; }
-.summary-table thead th { position: sticky; top: 0; background: var(--cream); font-family: var(--mono); font-size: 9.5px; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; color: var(--gold-deep); padding: 11px 9px; border-bottom: 1px solid var(--line-2); white-space: nowrap; z-index: 2; }
+/* thead pins at the live bottom of Key Metrics (below filters + KPI, replacing granularity).
+   IMPORTANT: position:sticky must be on <thead>, NOT <th>. Chrome does not stick individual
+   <th> cells (esp. with border-collapse:collapse) — they scroll straight past the pin point.
+   Sticky on the <thead> element itself works. (Verified: th→broken, thead→pins correctly.) */
+.summary-table thead { position: sticky; top: var(--kpi-bottom, 200px); z-index: 2; }
+.summary-table thead th { background: var(--cream); font-family: var(--mono); font-size: 9.5px; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; color: var(--gold-deep); padding: 11px 9px; border-bottom: 1px solid var(--line-2); white-space: nowrap; }
 .th-left { text-align: left; }
 .th-right { text-align: right; }
 .th-inner { display: inline-flex; align-items: center; gap: 5px; }
@@ -225,18 +238,37 @@ th.sortable:hover .sort-ind { opacity: .4; }
 .twist.open { background: var(--ink); border-color: var(--ink); color: #fff; }
 .twist-spacer { display: inline-block; width: 18px; height: 18px; margin-right: 9px; vertical-align: middle; }
 
+/* row checkbox */
+.row-check { width: 17px; height: 17px; border-radius: 5px; border: 1.6px solid var(--line-2); background: var(--paper); display: inline-grid; place-items: center; vertical-align: middle; margin-right: 10px; cursor: pointer; color: #fff; transition: .14s; flex: 0 0 auto; }
+.row-check:hover { border-color: var(--gold); }
+.row-check.on { background: var(--gold); border-color: var(--gold); }
+tr.tr-sel td { background: rgba(201,168,76,.12) !important; }
+tr.tr-sel .name-txt { color: var(--ink); }
+tr.tr-sel td:first-child { box-shadow: inset 3px 0 0 var(--gold); }
+tr.tr-dim td { opacity: .36; transition: opacity .2s; }
+tr.tr-dim .row-check { opacity: .5; }
+
+/* chart-scope indicator in table header */
+.table-scope { display: inline-flex; align-items: center; gap: 9px; font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--gold-deep); }
+.scope-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--gold); }
+.scope-clear { font-family: var(--mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); background: none; border: 1px solid var(--line-2); border-radius: 999px; padding: 3px 10px; cursor: pointer; transition: .14s; }
+.scope-clear:hover { border-color: var(--gold); color: var(--gold-deep); }
+
 /* ── FOOTER ── */
 .dash-foot { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--line); font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
 .dash-foot .hm-mini { font-family: var(--serif); font-size: 14px; letter-spacing: -.01em; text-transform: none; color: var(--ink); }
 .dash-foot .hm-mini .slash { color: var(--gold); }
 
-/* kill transitions while measuring compact/full heights */
-.dash.no-anim, .dash.no-anim * { transition: none !important; }
+/* shadow under table column header once it has pinned */
+.dash:has(.topbar.swap) .summary-table thead th { box-shadow: 0 10px 22px -16px rgba(20,18,30,.4); }
 
-/* ── FIT-TO-SCREEN OVERVIEW (desktop only ≥1025px) ── */
+/* ── FIT-TO-SCREEN: chart sticky-pinned in its stage (desktop ≥1025) ── */
 @container dash (min-width: 1025px) {
-  .overview { display: flex; flex-direction: column; height: calc(100svh - var(--topbar-ch, 225px) - 14px); min-height: 460px; }
-  .overview .gran { margin: 12px 0 10px; }
+  /* chart-stage is taller than the viewport by --stage-room, giving scroll distance
+     during which the chart stays framed; once stage scrolls past, chart releases up */
+  .chart-stage { min-height: calc(100svh - var(--topbar-ch, 196px) + var(--stage-room, 150px)); }
+  /* overview sticks right below the compact bar and fills the remaining viewport */
+  .overview { position: sticky; top: var(--topbar-ch, 196px); z-index: 1; display: flex; flex-direction: column; height: calc(100svh - var(--topbar-ch, 196px) - 10px); background: var(--bg); padding: 12px 0 4px; }
   .overview .analytics-grid { flex: 1 1 auto; min-height: 0; }
   .overview .chart-card, .overview .pie-card { height: 100%; min-height: 0; overflow: hidden; }
   .overview .chart-body { flex: 1 1 auto; min-height: 0; position: relative; }
@@ -244,26 +276,18 @@ th.sortable:hover .sort-ind { opacity: .4; }
   .overview .pie-legend { flex: 0 0 auto; overflow: hidden; min-height: 0; }
   .overview .chart-body .recharts-responsive-container,
   .overview .pie-body .recharts-responsive-container { position: absolute; inset: 0; width: auto !important; height: auto !important; }
-  .overview .kpi-block-head { margin-bottom: 6px; }
-  .overview .kpi-row { gap: 8px; }
-  .overview .kpi { padding: 7px 11px; gap: 1px; }
-  .overview .kpi-value { font-size: 17px; }
-  .overview .kpi-sub { font-size: 9.5px; }
-  .overview .gran { margin: 4px 0 6px; }
   .overview .chart-card { padding: 14px 16px 8px; }
   .overview .chart-head { margin-bottom: 6px; }
   .overview .analytics-grid { grid-template-columns: 3fr 1.12fr; }
   .overview .pie-card { padding: 14px 14px 12px; }
   .overview .pie-head { margin-bottom: 6px; }
-  /* table card must not clip — lets thead pin to the window, not the card */
-  .table-card { overflow: visible; min-height: calc(100svh - 40px); }
+  .overview .pie-legend { display: grid; grid-template-columns: 1fr 1fr; gap: 5px 14px; margin-top: 9px; padding-top: 9px; }
+  /* table card must not clip thead — lets it pin to the window */
+  .table-card { overflow: visible; min-height: calc(100svh - 120px); }
   .table-scroll { overflow: visible; }
 }
 
-/* shadow under table column header once KPI bar has slid away */
-.dash:has(.topbar.away) .summary-table thead th { box-shadow: 0 10px 22px -16px rgba(20,18,30,.4); }
-
-/* tighten table cells on narrower viewports so all 11 cols keep fitting */
+/* tighten table cells on narrower viewports */
 @container dash (max-width: 1180px) {
   .summary-table tbody td { padding-left: 6px; padding-right: 6px; }
   .summary-table thead th { padding-left: 6px; padding-right: 6px; font-size: 9px; letter-spacing: .08em; }
@@ -276,14 +300,12 @@ th.sortable:hover .sort-ind { opacity: .4; }
   .filter-bar { padding: 14px 22px; }
   .dash-body { padding: 22px 22px 44px; }
   .kpi-row { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
-  .kpi-sub { display: block; }
   .analytics-grid { grid-template-columns: 1fr; }
   .pie-card { display: grid; column-gap: 28px; align-items: center; grid-template-columns: minmax(0, 300px) 1fr; grid-template-areas: "head head" "seg seg" "body legend"; }
   .pie-head { grid-area: head; }
   .pie-seg { grid-area: seg; max-width: 400px; }
   .pie-body { grid-area: body; }
   .pie-legend { grid-area: legend; margin-top: 0; padding-top: 0; border-top: none; }
-  .geo-bars .pie-card, .geo-bars { grid-template-columns: 1fr; grid-template-areas: "head" "seg" "body"; }
   .topbar { position: static; }
   .fb-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; align-items: end; }
   .fb-fields .dd { flex: initial; min-width: 0; }
@@ -315,9 +337,7 @@ th.sortable:hover .sort-ind { opacity: .4; }
   .filter-bar { padding: 12px 16px; }
   .dash-body { padding: 18px 16px 40px; }
   .kpi-row { grid-template-columns: repeat(2, 1fr); }
-  .hm-logo { font-size: 22px; }
-  .head-h1 { font-size: 19px; }
-  .head-div { height: 28px; }
+  .hm-logo { font-size: 18px; }
   .fb-fields .dd { flex: 1 1 100%; }
   .fb-reset { width: 100%; }
   .chart-body { min-height: 220px; }
