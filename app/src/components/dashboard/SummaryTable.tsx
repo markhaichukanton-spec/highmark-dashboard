@@ -108,7 +108,7 @@ interface Props {
 
 export function SummaryTable({ rows, values, onToggleEntity, onClearScope }: Props) {
   const [sort, setSort] = useState<{ key: string; dir: 'asc' | 'desc' }>({ key: 'spend', dir: 'desc' })
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({ '0': true })
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({})
 
   const toggle = useCallback((p: string) => {
     setExpanded((e) => ({ ...e, [p]: !e[p] }))

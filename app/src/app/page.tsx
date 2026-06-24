@@ -143,6 +143,10 @@ export default function DashboardPage() {
       timeoutId = setTimeout(finalize, DUR + 60)
     }
 
+    // stable compact height of the granularity strip — defines where its bottom edge
+    // sits below Key Metrics (used to hide it when it pokes past the chart's bottom)
+    let granBarH = 0
+
     // measure --head-h (slim header) and --topbar-ch (compact topbar + head + body-pad)
     // and --kpi-bottom (where table thead should pin = bottom of KPI block)
     const measure = () => {
@@ -152,6 +156,8 @@ export default function DashboardPage() {
       dash.classList.add('no-anim')
       applyT(1)
       const compactTopbar = topbar.getBoundingClientRect().height
+      const granH = granBar ? granBar.getBoundingClientRect().height : 0
+      if (granH > 0) granBarH = granH  // keep last good value if currently swapped out
       const fbH   = filterBar ? filterBar.getBoundingClientRect().height : 0
       const kpiEl = topbar.querySelector('.kpi-block') as HTMLElement | null
       const kpiH  = kpiEl ? kpiEl.getBoundingClientRect().height : 0
@@ -171,18 +177,21 @@ export default function DashboardPage() {
       if (next !== compact) { compact = next; tweenTo(compact ? 1 : 0) }
       topbar.classList.toggle('stuck', y > 6)
 
-      // swap: when table thead reaches the KPI bar bottom, hide gran-bar so thead
-      // takes its visual slot. Filters + Key Metrics stay pinned above.
+      // swap: hide the granularity strip the instant it would poke ≥1px below the
+      // chart's bottom edge (the chart has scrolled up far enough that the pinned
+      // gran-bar no longer sits over the chart). Table thead — always sticky — then
+      // pins at --kpi-bottom right under Key Metrics. Filters + KPI stay pinned above.
       const wide = dash.getBoundingClientRect().width >= 1025
-      const thead = dash.querySelector('.summary-table thead') as HTMLElement | null
+      const overview = dash.querySelector('.overview') as HTMLElement | null
       const kpiEl = topbar.querySelector('.kpi-block') as HTMLElement | null
-      if (wide && thead && kpiEl) {
+      if (wide && overview && kpiEl) {
         const kpiBot = Math.round(kpiEl.getBoundingClientRect().bottom)
         dash.style.setProperty('--kpi-bottom', kpiBot + 'px')
-        const theadTop = thead.getBoundingClientRect().top
+        const granBot = kpiBot + granBarH          // viewport y of the gran-bar's bottom edge
+        const chartBottom = overview.getBoundingClientRect().bottom
         const wasSwap = topbar.classList.contains('swap')
-        // hysteresis: un-swap only when thead pulls back 40px below the threshold
-        const swap = wasSwap ? theadTop <= kpiBot + 40 : theadTop <= kpiBot + 4
+        // on: chart bottom risen ≥1px above gran-bar bottom · off: chart pulled back 40px (hysteresis)
+        const swap = wasSwap ? chartBottom < granBot + 40 : chartBottom < granBot - 1
         topbar.classList.toggle('swap', swap)
       } else {
         topbar.classList.remove('swap')
