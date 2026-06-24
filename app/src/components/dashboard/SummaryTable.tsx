@@ -1,6 +1,7 @@
 'use client'
 import { useState, useMemo, useCallback, Fragment } from 'react'
 import { fmt, COLORS } from '@/lib/dashboard-config'
+import { SEP } from '@/lib/dashboard-client'
 import type { TreeNode } from '@/lib/dashboard-client'
 
 const COLDEFS = [
@@ -17,8 +18,6 @@ const COLDEFS = [
   { key: 'impressions', label: 'Impr.',  align: 'right', sortable: true, fmt: (v: number) => fmt.compact(v) },
 ] as const
 
-const LEVEL_KEY = ['Campaign', 'Adset', 'Ad'] as const
-
 function roasStyle(roas: number): React.CSSProperties {
   if (roas >= 3.0) return { background: COLORS.goodBg, color: COLORS.goodInk }
   if (roas < 2.0)  return { background: COLORS.badBg,  color: COLORS.badInk }
@@ -32,26 +31,33 @@ interface RowProps {
   expanded: Record<string, boolean>
   onToggle: (path: string) => void
   path: string
-  values: Record<string, string[]>
-  onToggleEntity: (levelKey: string, name: string) => void
+  rowKey: string                      // hierarchy key campaign▸adset▸ad
+  parentKeys: string[]
+  selectedKeys: Set<string>
+  onToggleKey: (key: string) => void
+  anySelected: boolean
 }
 
-function TableRow({ node, depth, label, expanded, onToggle, path, values, onToggleEntity }: RowProps) {
+function TableRow({ node, depth, label, expanded, onToggle, path, rowKey, parentKeys, selectedKeys, onToggleKey, anySelected }: RowProps) {
   const hasKids = !!(node.children && node.children.length > 0)
   const isOpen = expanded[path]
-  const levelKey = LEVEL_KEY[depth]
-  const sel = (values && values[levelKey]) || []
-  const checked = !!label && sel.includes(label)
+  const checked = selectedKeys.has(rowKey)
+  // a row is "active" (not dimmed) when nothing is selected, or it sits on the
+  // path of a selection: itself selected, an ancestor of a selected row, or a
+  // descendant of a selected row. Unrelated rows dim.
+  const onAncestorPath = [...selectedKeys].some((k) => k.startsWith(rowKey + SEP))
+  const onDescendantPath = parentKeys.some((pk) => selectedKeys.has(pk))
+  const active = !anySelected || checked || onAncestorPath || onDescendantPath
 
   return (
     <Fragment>
-      <tr className={'tr-d' + depth + (checked ? ' tr-sel' : '')}>
+      <tr className={'tr-d' + depth + (checked ? ' tr-sel' : '') + (anySelected && !active ? ' tr-dim' : '')}>
         <td className="tcell-name" style={{ paddingLeft: 16 + depth * 22 }}>
           <button
             className={'row-check' + (checked ? ' on' : '')}
-            onClick={() => label && onToggleEntity(levelKey, label)}
+            onClick={() => onToggleKey(rowKey)}
             aria-label={checked ? 'remove from chart' : 'show on chart'}
-            title={checked ? 'Plotted on chart — click to remove' : 'Plot only this on the chart'}
+            title={checked ? 'Plotted on chart — click to remove' : 'Plot only this row on the chart'}
           >
             {checked && (
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
@@ -82,31 +88,38 @@ function TableRow({ node, depth, label, expanded, onToggle, path, values, onTogg
           </td>
         ))}
       </tr>
-      {hasKids && isOpen && node.children!.map((child, i) => (
-        <TableRow
-          key={path + '-' + i}
-          node={child}
-          depth={depth + 1}
-          label={depth === 0 ? child.adset : child.ad}
-          expanded={expanded}
-          onToggle={onToggle}
-          path={path + '-' + i}
-          values={values}
-          onToggleEntity={onToggleEntity}
-        />
-      ))}
+      {hasKids && isOpen && node.children!.map((child, i) => {
+        const childLabel = depth === 0 ? child.adset : child.ad
+        const childKey = rowKey + SEP + (childLabel ?? '')
+        return (
+          <TableRow
+            key={path + '-' + i}
+            node={child}
+            depth={depth + 1}
+            label={childLabel}
+            expanded={expanded}
+            onToggle={onToggle}
+            path={path + '-' + i}
+            rowKey={childKey}
+            parentKeys={[...parentKeys, rowKey]}
+            selectedKeys={selectedKeys}
+            onToggleKey={onToggleKey}
+            anySelected={anySelected}
+          />
+        )
+      })}
     </Fragment>
   )
 }
 
 interface Props {
   rows: TreeNode[]
-  values: Record<string, string[]>
-  onToggleEntity: (levelKey: string, name: string) => void
+  selectedKeys: Set<string>
+  onToggleKey: (key: string) => void
   onClearScope: () => void
 }
 
-export function SummaryTable({ rows, values, onToggleEntity, onClearScope }: Props) {
+export function SummaryTable({ rows, selectedKeys, onToggleKey, onClearScope }: Props) {
   const [sort, setSort] = useState<{ key: string; dir: 'asc' | 'desc' }>({ key: 'spend', dir: 'desc' })
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
 
@@ -114,8 +127,8 @@ export function SummaryTable({ rows, values, onToggleEntity, onClearScope }: Pro
     setExpanded((e) => ({ ...e, [p]: !e[p] }))
   }, [])
 
-  const scopeCount = (['Campaign', 'Adset', 'Ad'] as const)
-    .reduce((n, k) => n + ((values[k] || []).filter((v) => v !== ' ').length), 0)
+  const scopeCount = selectedKeys.size
+  const anySelected = scopeCount > 0
 
   const sorted = useMemo(() => {
     const arr = [...rows]
@@ -135,10 +148,10 @@ export function SummaryTable({ rows, values, onToggleEntity, onClearScope }: Pro
     <div className="table-card">
       <div className="table-head-bar">
         <h2 className="table-title">Campaign breakdown</h2>
-        {scopeCount > 0 ? (
+        {anySelected ? (
           <span className="table-scope">
             <span className="scope-dot" />
-            {scopeCount} selected on chart
+            {scopeCount} row{scopeCount === 1 ? '' : 's'} on chart
             <button className="scope-clear" onClick={onClearScope}>Clear</button>
           </span>
         ) : (
@@ -179,8 +192,11 @@ export function SummaryTable({ rows, values, onToggleEntity, onClearScope }: Pro
                 expanded={expanded}
                 onToggle={toggle}
                 path={String(i)}
-                values={values}
-                onToggleEntity={onToggleEntity}
+                rowKey={node.campaign}
+                parentKeys={[]}
+                selectedKeys={selectedKeys}
+                onToggleKey={onToggleKey}
+                anySelected={anySelected}
               />
             ))}
           </tbody>

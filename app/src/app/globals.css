@@ -249,6 +249,7 @@ tr.tr-sel td { background: rgba(201,168,76,.12) !important; }
 tr.tr-sel .name-txt { color: var(--ink); }
 tr.tr-sel td:first-child { box-shadow: inset 3px 0 0 var(--gold); }
 tr.tr-dim td { opacity: .36; transition: opacity .2s; }
+tr.tr-dim td { opacity: .36; transition: opacity .2s; }
 tr.tr-dim .row-check { opacity: .5; }
 
 /* chart-scope indicator in table header */

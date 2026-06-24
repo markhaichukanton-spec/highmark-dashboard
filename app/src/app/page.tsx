@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { format, subDays } from 'date-fns'
-import { loadDashboard, exportUrl, chartSeries, type DashboardData, type DashboardFilterOptions } from '@/lib/dashboard-client'
+import { loadDashboard, exportUrl, chartSeriesForKeys, type DashboardData, type DashboardFilterOptions } from '@/lib/dashboard-client'
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader'
 import { FilterBar } from '@/components/dashboard/FilterBar'
 import { Granularity } from '@/components/dashboard/Granularity'
@@ -28,6 +28,7 @@ export default function DashboardPage() {
   const [gran, setGran]         = useState('Day')
   const [selected, setSelected] = useState(['roas', 'revenue', 'spend'])
   const [filterValues, setFilterValues] = useState<Record<string, string[]>>({})
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(() => new Set())
   const [range, setRange]       = useState({ from: DEFAULT_FROM, to: DEFAULT_TO })
   const [data, setData]         = useState<DashboardData | null>(null)
   const [loading, setLoading]   = useState(true)
@@ -51,9 +52,17 @@ export default function DashboardPage() {
     })
   }, [])
 
-  const clearScope = useCallback(() => {
-    setFilterValues((f) => ({ ...f, Campaign: [], Adset: [], Ad: [] }))
+  // per-row chart scope, keyed by hierarchy (campaign/adset/ad). A Set of unique
+  // keys — ticking one adset never selects same-named adsets under other campaigns.
+  const toggleKey = useCallback((key: string) => {
+    setSelectedKeys((cur) => {
+      const next = new Set(cur)
+      if (next.has(key)) next.delete(key); else next.add(key)
+      return next
+    })
   }, [])
+
+  const clearScope = useCallback(() => setSelectedKeys(new Set()), [])
 
   const toggleMetric = useCallback((key: string) => {
     setSelected((cur) => {
@@ -237,14 +246,17 @@ export default function DashboardPage() {
 
   const chartData = useMemo(() => {
     if (!data) return []
-    return chartSeries(data.ENTITIES, data.SERIES, filterValues)
-  }, [data, filterValues])
+    return chartSeriesForKeys(data.ENTITIES, data.SERIES, [...selectedKeys])
+  }, [data, selectedKeys])
 
-  const scopeNames = (['Campaign', 'Adset', 'Ad'] as const)
-    .flatMap((k) => (filterValues[k] || []).filter((v) => v !== ' '))
-  const scopeLabel = scopeNames.length === 0 ? ''
-    : scopeNames.length === 1 ? scopeNames[0]
-    : scopeNames.length + ' selected'
+  const scopeLabel = useMemo(() => {
+    if (!data || selectedKeys.size === 0) return ''
+    if (selectedKeys.size === 1) {
+      const k = [...selectedKeys][0]
+      return data.ENTITIES.find((e) => e.key === k)?.name ?? '1 row'
+    }
+    return selectedKeys.size + ' rows'
+  }, [data, selectedKeys])
 
   return (
     <div className="dash">
@@ -306,8 +318,8 @@ export default function DashboardPage() {
 
             <SummaryTable
               rows={data.TABLE}
-              values={filterValues}
-              onToggleEntity={toggleEntity}
+              selectedKeys={selectedKeys}
+              onToggleKey={toggleKey}
               onClearScope={clearScope}
             />
 

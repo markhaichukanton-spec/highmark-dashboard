@@ -209,6 +209,8 @@ export function dashGeoQuery(f: DashboardFilters): string {
 }
 
 export function dashTableQuery(f: DashboardFilters): string {
+  // Row ticks scope the chart client-side (selectedKeys) and never touch the API,
+  // so the table query only narrows via the FilterBar (source/geo/type/campaign…).
   return `
     SELECT
       campaign_name,
