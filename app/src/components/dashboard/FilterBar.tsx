@@ -25,6 +25,7 @@ export function FilterBar({ filters, values, onChange, onReset }: Props) {
             options={filters[k]}
             value={values[k] || []}
             onChange={(v) => onChange(k, v)}
+            additive={k === 'Campaign' || k === 'Adset' || k === 'Ad'}
           />
         ))}
       </div>

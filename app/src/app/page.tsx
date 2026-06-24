@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { format, subDays } from 'date-fns'
-import { loadDashboard, exportUrl, chartSeriesForKeys, type DashboardData, type DashboardFilterOptions } from '@/lib/dashboard-client'
+import { loadDashboard, exportUrl, SEP, type DashboardData, type DashboardFilterOptions } from '@/lib/dashboard-client'
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader'
 import { FilterBar } from '@/components/dashboard/FilterBar'
 import { Granularity } from '@/components/dashboard/Granularity'
@@ -38,11 +38,27 @@ export default function DashboardPage() {
 
   const filters = data?.FILTERS ?? EMPTY_FILTERS
 
-  const onFilter = useCallback((k: string, v: string[]) => {
-    setFilterValues((f) => ({ ...f, [k]: v }))
-  }, [])
+  // Campaign/Adset/Ad live in selectedKeys (composite scope), everything else in
+  // filterValues. Picking a name in those dropdowns toggles the matching keys, so
+  // the dropdowns and the table row-ticks stay in sync (bidirectional).
+  const SCOPE_LEVEL: Record<string, number> = { Campaign: 1, Adset: 2, Ad: 3 }
 
-  const resetFilters = useCallback(() => setFilterValues({}), [])
+  const onFilter = useCallback((k: string, v: string[]) => {
+    const lvl = SCOPE_LEVEL[k]
+    if (lvl && data) {
+      const names = new Set(v.filter((n) => n !== ' '))
+      const levelKeys = data.ENTITIES.filter((e) => e.key.split(SEP).length === lvl && names.has(e.name)).map((e) => e.key)
+      setSelectedKeys((cur) => {
+        const next = new Set([...cur].filter((key) => key.split(SEP).length !== lvl))
+        levelKeys.forEach((key) => next.add(key))
+        return next
+      })
+    } else {
+      setFilterValues((f) => ({ ...f, [k]: v }))
+    }
+  }, [data])
+
+  const resetFilters = useCallback(() => { setFilterValues({}); setSelectedKeys(new Set()) }, [])
 
   const toggleEntity = useCallback((levelKey: string, name: string) => {
     setFilterValues((f) => {
@@ -238,25 +254,36 @@ export default function DashboardPage() {
       granularity: gran.toLowerCase(),
       compare,
       filters: filterValues as Partial<DashboardFilterOptions>,
+      scope: [...selectedKeys],
     })
       .then(setData)
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false))
-  }, [range, gran, compare, filterValues])
+  }, [range, gran, compare, filterValues, selectedKeys])
 
-  const chartData = useMemo(() => {
-    if (!data) return []
-    return chartSeriesForKeys(data.ENTITIES, data.SERIES, [...selectedKeys])
-  }, [data, selectedKeys])
+  // chart shows the server-scoped series directly (real per-entity data, no synthesis)
+  const chartData = useMemo(() => data?.SERIES ?? [], [data])
 
   const scopeLabel = useMemo(() => {
-    if (!data || selectedKeys.size === 0) return ''
+    if (selectedKeys.size === 0) return ''
     if (selectedKeys.size === 1) {
       const k = [...selectedKeys][0]
-      return data.ENTITIES.find((e) => e.key === k)?.name ?? '1 row'
+      return k.split(SEP).pop() ?? '1 row'
     }
     return selectedKeys.size + ' rows'
-  }, [data, selectedKeys])
+  }, [selectedKeys])
+
+  // values shown in the FilterBar: Source/GEO/Type/Device from filterValues, and
+  // Campaign/Adset/Ad derived from selectedKeys (names per level) so the dropdowns
+  // mirror the table row-ticks.
+  const barValues = useMemo(() => {
+    const namesAt = (lvl: number) => {
+      const s = new Set<string>()
+      selectedKeys.forEach((k) => { const parts = k.split(SEP); if (parts.length === lvl) s.add(parts[lvl - 1]) })
+      return [...s]
+    }
+    return { ...filterValues, Campaign: namesAt(1), Adset: namesAt(2), Ad: namesAt(3) }
+  }, [filterValues, selectedKeys])
 
   return (
     <div className="dash">
@@ -272,7 +299,7 @@ export default function DashboardPage() {
 
       {/* Sticky topbar: filters + KPI + granularity — all compact together on scroll */}
       <div className="topbar" ref={topbarRef}>
-        <FilterBar filters={filters} values={filterValues} onChange={onFilter} onReset={resetFilters} />
+        <FilterBar filters={filters} values={barValues} onChange={onFilter} onReset={resetFilters} />
         {data && (
           <KPIRow
             kpis={data.KPIS}

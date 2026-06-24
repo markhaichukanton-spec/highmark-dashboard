@@ -21,6 +21,9 @@ export interface DashboardFilters {
   campaign?: string[]
   adset?: string[]
   ad?: string[]
+  // per-row chart scope: composite hierarchy keys campaign▸adset▸ad (SEP ).
+  // Filters KPI/series/geo to the REAL rows of the selected entities (never the table).
+  scope?: string[]
 }
 
 export type Granularity = 'DAY' | 'WEEK' | 'MONTH' | 'QUARTER' | 'YEAR'
@@ -97,6 +100,22 @@ function buildWhere(f: Filters): string {
   return clauses.join(' AND ')
 }
 
+// Row-tick scope: each key is campaign[▸adset[▸ad]] joined by SEP (char 0x01).
+// Builds (campaign='c' AND adset='a' AND ad='d') OR (...) — real rows, no synthesis.
+function buildScopeClause(scope?: string[]): string | null {
+  if (!scope || scope.length === 0) return null
+  const SEP = String.fromCharCode(1)
+  const parts = scope.map((key) => {
+    const [c, a, d] = key.split(SEP)
+    const cl: string[] = []
+    if (c) cl.push(`campaign_name = '${sanitize(c)}'`)
+    if (a) cl.push(`adset_name = '${sanitize(a)}'`)
+    if (d) cl.push(`ad_name = '${sanitize(d)}'`)
+    return cl.length ? `(${cl.join(' AND ')})` : null
+  }).filter(Boolean)
+  return parts.length ? `(${parts.join(' OR ')})` : null
+}
+
 function buildDashWhere(f: DashboardFilters): string {
   const clauses: string[] = [`date BETWEEN '${sanitize(f.since)}' AND '${sanitize(f.until)}'`]
   const addIn = (field: string, values?: string[]) => {
@@ -110,6 +129,8 @@ function buildDashWhere(f: DashboardFilters): string {
   addIn('campaign_name', f.campaign)
   addIn('adset_name', f.adset)
   addIn('ad_name', f.ad)
+  const scopeClause = buildScopeClause(f.scope)
+  if (scopeClause) clauses.push(scopeClause)
   return clauses.join(' AND ')
 }
 
@@ -209,8 +230,9 @@ export function dashGeoQuery(f: DashboardFilters): string {
 }
 
 export function dashTableQuery(f: DashboardFilters): string {
-  // Row ticks scope the chart client-side (selectedKeys) and never touch the API,
-  // so the table query only narrows via the FilterBar (source/geo/type/campaign…).
+  // The table is a facet: it ignores the row-tick `scope` (else it would collapse
+  // to the ticked rows). It still narrows via the FilterBar (source/geo/type/campaign…).
+  const { scope: _scope, ...rest } = f
   return `
     SELECT
       campaign_name,
@@ -222,7 +244,7 @@ export function dashTableQuery(f: DashboardFilters): string {
       SUM(purchases)                AS purchases,
       CAST(SUM(revenue) AS FLOAT64) AS revenue
     FROM ${TABLE}
-    WHERE ${buildDashWhere(f)}
+    WHERE ${buildDashWhere(rest as DashboardFilters)}
     GROUP BY campaign_name, adset_name, ad_name
     ORDER BY spend DESC`
 }
@@ -268,6 +290,7 @@ export function parseDashboardFilters(s: URLSearchParams): DashboardFilters {
     campaign:      getAll('campaign'),
     adset:         getAll('adset'),
     ad:            getAll('ad'),
+    scope:         getAll('scope'),
   }
 }
 

@@ -31,6 +31,7 @@ export function GeoBar({ geoData, metas, colors, selected, onToggle }: Props) {
     .map((g, i) => ({
       name: g.geo,
       value: (g as unknown as Record<string, number>)[key],
+      roas: g.roas,
       color: colors[i % colors.length],
     }))
     .filter((d) => d.value > 0)
@@ -69,14 +70,19 @@ export function GeoBar({ geoData, metas, colors, selected, onToggle }: Props) {
     const { x, y, width, height, value, index } = props
     const d = data[index]
     if (!d) return null
+    const on = isOn(d.name)
     return (
       <text
         x={Number(x) + Number(width) + 8}
         y={Number(y) + Number(height) / 2} dy={3.5}
         textAnchor="start" style={LABEL_FONT}
-        fill={isOn(d.name) ? INK : INK_DIM}
+        fill={on ? INK : INK_DIM}
       >
         {barLabel(value)}
+        <tspan dx={6} fill={on ? INK : INK_DIM}>·</tspan>
+        <tspan dx={6} fill={on ? '#8E6F3E' : INK_DIM}>
+          {'ROAS ' + fmt.ratio(d.roas)}
+        </tspan>
       </text>
     )
   }
@@ -106,7 +112,7 @@ export function GeoBar({ geoData, metas, colors, selected, onToggle }: Props) {
           <BarChart
             data={data}
             layout="vertical"
-            margin={{ top: 6, right: 78, left: 4, bottom: 2 }}
+            margin={{ top: 6, right: 132, left: 4, bottom: 2 }}
             barCategoryGap="34%"
           >
             <CartesianGrid stroke="rgba(20,18,30,0.07)" horizontal={false} />
