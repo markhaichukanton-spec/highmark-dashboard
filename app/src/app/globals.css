@@ -183,6 +183,8 @@ body { font-family: var(--sans); color: var(--ink); -webkit-font-smoothing: anti
 .pie-seg-btn.on::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 2px; background: var(--mc); margin-right: 4px; vertical-align: middle; }
 .pie-body { position: relative; height: 188px; width: 100%; margin-top: 6px; }
 .geo-bars-body { height: 240px; }
+/* no black focus rectangle when clicking a GEO bar/label to toggle the filter */
+.geo-bars svg:focus, .geo-bars svg *:focus, .geo-bars .recharts-surface:focus { outline: none; }
 
 /* recharts tooltip */
 .chart-tip { background: var(--ink); border-radius: 10px; padding: 11px 13px; box-shadow: 0 14px 32px -12px rgba(0,0,0,.5); min-width: 150px; }

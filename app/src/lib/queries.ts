@@ -194,12 +194,16 @@ export function dashSeriesQuery(f: DashboardFilters, granularity: Granularity): 
 }
 
 export function dashGeoQuery(f: DashboardFilters): string {
+  // The GEO breakdown is a facet selector — it must NOT filter itself by `geo`,
+  // otherwise picking a country collapses the chart to that single bar and you
+  // can't toggle others. All OTHER filters still apply.
+  const { geo: _omitGeo, ...rest } = f
   return `
     SELECT
       country AS geo,
       ${RAW_METRICS}
     FROM ${TABLE}
-    WHERE ${buildDashWhere(f)}
+    WHERE ${buildDashWhere(rest as DashboardFilters)}
     GROUP BY country
     ORDER BY spend DESC`
 }

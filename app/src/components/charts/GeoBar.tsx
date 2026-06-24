@@ -12,13 +12,18 @@ interface Props {
   geoData: GeoPoint[]
   metas: Record<string, MetricMeta>
   colors: string[]
+  selected: string[]                 // GEOs currently in the filter
+  onToggle: (geo: string) => void    // click a bar/label to add/remove from the GEO filter
 }
 
 const OPTS = ['revenue', 'spend', 'purchases'] as const
 const AX = { fontFamily: '"DM Mono", monospace', fontSize: 10, fill: '#6B6E7A', letterSpacing: '0.04em' }
 const LABEL_FONT = { fontFamily: '"DM Mono", monospace', fontSize: 9.5, fontWeight: 500 }
+const GRAY_BAR = '#DAD5C7'    // inactive bar
+const INK = '#3A3B47'
+const INK_DIM = '#B7B1A1'     // inactive label text
 
-export function GeoBar({ geoData, metas, colors }: Props) {
+export function GeoBar({ geoData, metas, colors, selected, onToggle }: Props) {
   const [key, setKey] = useState<string>('revenue')
   const meta = metas[key]
 
@@ -31,11 +36,49 @@ export function GeoBar({ geoData, metas, colors }: Props) {
     .filter((d) => d.value > 0)
     .sort((a, b) => b.value - a.value)
 
+  const hasSel = selected.length > 0
+  const isOn = (name: string) => !hasSel || selected.includes(name)
+
   const total = data.reduce((a, d) => a + d.value, 0)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const barLabel = (v: any) => {
     const n = Number(v)
     return `${meta?.short(n) ?? n} · ${total ? Math.round((n / total) * 100) : 0}%`
+  }
+
+  // clickable + dimmable country code on the Y axis
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const renderTick = (props: any) => {
+    const { x, y, payload } = props
+    const name = String(payload?.value ?? '')
+    return (
+      <text
+        x={x} y={y} dy={4} textAnchor="end"
+        style={{ fontFamily: '"DM Mono", monospace', fontSize: 11, letterSpacing: '0.04em', cursor: 'pointer' }}
+        fill={isOn(name) ? INK : INK_DIM}
+        onClick={() => onToggle(name)}
+      >
+        {name}
+      </text>
+    )
+  }
+
+  // value label, dimmed when the bar is inactive
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const renderValueLabel = (props: any) => {
+    const { x, y, width, height, value, index } = props
+    const d = data[index]
+    if (!d) return null
+    return (
+      <text
+        x={Number(x) + Number(width) + 8}
+        y={Number(y) + Number(height) / 2} dy={3.5}
+        textAnchor="start" style={LABEL_FONT}
+        fill={isOn(d.name) ? INK : INK_DIM}
+      >
+        {barLabel(value)}
+      </text>
+    )
   }
 
   return (
@@ -77,7 +120,8 @@ export function GeoBar({ geoData, metas, colors }: Props) {
             <YAxis
               type="category"
               dataKey="name"
-              tick={{ ...AX, fontSize: 11, fill: '#3A3B47' }}
+              tick={renderTick}
+              interval={0}
               tickLine={false}
               axisLine={false}
               width={58}
@@ -98,16 +142,19 @@ export function GeoBar({ geoData, metas, colors }: Props) {
                 )
               }}
             />
-            <Bar dataKey="value" radius={[0, 4, 4, 0]} maxBarSize={26} isAnimationActive={false}>
-              {data.map((d) => <Cell key={d.name} fill={d.color} />)}
-              <LabelList
-                dataKey="value"
-                position="right"
-                formatter={barLabel}
-                fill="#3A3B47"
-                offset={8}
-                style={LABEL_FONT}
-              />
+            <Bar
+              dataKey="value"
+              radius={[0, 4, 4, 0]}
+              maxBarSize={26}
+              isAnimationActive={false}
+              style={{ cursor: 'pointer' }}
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              onClick={(entry: any) => { const n = entry?.name ?? entry?.payload?.name; if (n) onToggle(String(n)) }}
+            >
+              {data.map((d) => (
+                <Cell key={d.name} fill={isOn(d.name) ? d.color : GRAY_BAR} cursor="pointer" />
+              ))}
+              <LabelList dataKey="value" content={renderValueLabel} />
             </Bar>
           </BarChart>
         </ResponsiveContainer>

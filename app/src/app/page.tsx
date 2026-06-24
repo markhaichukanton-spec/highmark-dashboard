@@ -293,7 +293,13 @@ export default function DashboardPage() {
               <div className="overview">
                 <div className="analytics-grid">
                   <MetricChart data={chartData} selected={selected} metas={data.METRIC_META} scope={scopeLabel} />
-                  <GeoBar geoData={data.GEO} metas={data.METRIC_META} colors={data.GEO_COLORS} />
+                  <GeoBar
+                    geoData={data.GEO}
+                    metas={data.METRIC_META}
+                    colors={data.GEO_COLORS}
+                    selected={(filterValues['GEO'] || []).filter((v) => v !== ' ')}
+                    onToggle={(geo) => toggleEntity('GEO', geo)}
+                  />
                 </div>
               </div>
             </div>
