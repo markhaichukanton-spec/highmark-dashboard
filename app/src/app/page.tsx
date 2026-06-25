@@ -10,9 +10,6 @@ import { SummaryTable } from '@/components/dashboard/SummaryTable'
 import { MetricChart } from '@/components/charts/MetricChart'
 import { GeoBar } from '@/components/charts/GeoBar'
 
-const DEFAULT_FROM = format(subDays(new Date(), 30), 'yyyy-MM-dd')
-const DEFAULT_TO   = format(new Date(), 'yyyy-MM-dd')
-
 const EMPTY_FILTERS: DashboardFilterOptions = {
   Source: ['All sources'],
   GEO: ['All GEOs'],
@@ -29,7 +26,10 @@ export default function DashboardPage() {
   const [selected, setSelected] = useState(['roas', 'revenue', 'spend'])
   const [filterValues, setFilterValues] = useState<Record<string, string[]>>({})
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(() => new Set())
-  const [range, setRange]       = useState({ from: DEFAULT_FROM, to: DEFAULT_TO })
+  // Empty on first render (server + client match → no hydration mismatch); the real
+  // "last 30 days" default is computed on the client after mount. Computing `new Date()`
+  // at module/SSR time drifts vs the client (stale process / timezone) and broke hydration.
+  const [range, setRange]       = useState({ from: '', to: '' })
   const [data, setData]         = useState<DashboardData | null>(null)
   const [loading, setLoading]   = useState(true)
   const [error, setError]       = useState<string | null>(null)
@@ -245,7 +245,13 @@ export default function DashboardPage() {
     }
   }, [])
 
+  // set the "last 30 days" default on the client only (avoids SSR/client date drift)
   useEffect(() => {
+    setRange({ from: format(subDays(new Date(), 30), 'yyyy-MM-dd'), to: format(new Date(), 'yyyy-MM-dd') })
+  }, [])
+
+  useEffect(() => {
+    if (!range.from || !range.to) return   // wait for the client to set the default range
     setLoading(true)
     setError(null)
     loadDashboard({
