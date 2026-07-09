@@ -13,6 +13,8 @@ const fmt = (d: Date) => format(d, 'yyyy-MM-dd')
 function presets() {
   const today = new Date()
   return [
+    { label: 'Yesterday',    since: fmt(subDays(today, 1)),  until: fmt(subDays(today, 1)) },
+    { label: 'Last 3 days',  since: fmt(subDays(today, 2)),  until: fmt(today) },
     { label: 'Last 7 days',  since: fmt(subDays(today, 6)),  until: fmt(today) },
     { label: 'Last 14 days', since: fmt(subDays(today, 13)), until: fmt(today) },
     { label: 'Last 30 days', since: fmt(subDays(today, 29)), until: fmt(today) },
