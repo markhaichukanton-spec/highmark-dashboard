@@ -1,5 +1,5 @@
 'use client'
-import { useState, useMemo, useCallback, Fragment } from 'react'
+import { useState, useMemo, useCallback, useRef, useEffect, Fragment } from 'react'
 import { fmt, COLORS } from '@/lib/dashboard-config'
 import { SEP } from '@/lib/dashboard-client'
 import type { TreeNode } from '@/lib/dashboard-client'
@@ -145,64 +145,153 @@ export function SummaryTable({ rows, selectedKeys, onToggleKey, onClearScope }: 
     setSort((s) => s.key === key ? { key, dir: s.dir === 'desc' ? 'asc' : 'desc' } : { key, dir: 'desc' })
   }
 
-  return (
-    <div className="table-card">
-      <div className="table-head-bar">
-        <h2 className="table-title">Campaign breakdown</h2>
-        {anySelected ? (
-          <span className="table-scope">
-            <span className="scope-dot" />
-            {scopeCount} row{scopeCount === 1 ? '' : 's'} on chart
-            <button className="scope-clear" onClick={onClearScope}>Clear</button>
+  // header <tr> — rendered twice: in the real thead and in the floating clone.
+  const headRow = () => (
+    <tr>
+      {COLDEFS.map((c) => (
+        <th
+          key={c.key}
+          className={
+            'th-' + c.align +
+            (c.sortable ? ' sortable' : '') +
+            (sort.key === c.key ? ' sorted' : '')
+          }
+          onClick={c.sortable ? () => setSortKey(c.key) : undefined}
+        >
+          <span className="th-inner">
+            {c.label}
+            {c.sortable && (
+              <span className={'sort-ind' + (sort.key === c.key ? ' on ' + sort.dir : '')}>▾</span>
+            )}
           </span>
-        ) : (
-          <span className="table-hint">Tick a row to plot only it on the chart</span>
-        )}
-      </div>
-      <div className="table-scroll">
-        <table className="summary-table">
-          <thead>
-            <tr>
-              {COLDEFS.map((c) => (
-                <th
-                  key={c.key}
-                  className={
-                    'th-' + c.align +
-                    (c.sortable ? ' sortable' : '') +
-                    (sort.key === c.key ? ' sorted' : '')
-                  }
-                  onClick={c.sortable ? () => setSortKey(c.key) : undefined}
-                >
-                  <span className="th-inner">
-                    {c.label}
-                    {c.sortable && (
-                      <span className={'sort-ind' + (sort.key === c.key ? ' on ' + sort.dir : '')}>▾</span>
-                    )}
-                  </span>
-                </th>
+        </th>
+      ))}
+    </tr>
+  )
+
+  // ── Floating pinned header (mobile) ──────────────────────────────────────
+  // The table scrolls horizontally (12 columns), and a horizontal-scroll container
+  // clips vertical position:sticky — so the real thead can't stick on mobile. Instead
+  // we clone the header into a bar that tracks the sticky page header's bottom edge
+  // and mirrors the table's horizontal scroll. Positioned ABSOLUTE relative to `.dash`
+  // (whose container-type makes it the containing block) with top = scrollY + pin, so
+  // it behaves like fixed while still inheriting the container-query header styles.
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const tableRef = useRef<HTMLTableElement>(null)
+  const theadRef = useRef<HTMLTableSectionElement>(null)
+  const floatRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const dash = document.querySelector('.dash') as HTMLElement | null
+    const head = document.querySelector('.dash-head') as HTMLElement | null
+    const scroller = scrollRef.current
+    const table = tableRef.current
+    const thead = theadRef.current
+    const floatEl = floatRef.current
+    if (!dash || !head || !scroller || !table || !thead || !floatEl) return
+    const floatTable = floatEl.querySelector('table') as HTMLTableElement | null
+    const floatCols = [...floatEl.querySelectorAll('col')] as HTMLTableColElement[]
+    if (!floatTable) return
+
+    const isMobile = () => dash.getBoundingClientRect().width < 1025
+
+    const syncWidths = () => {
+      const ths = [...thead.querySelectorAll('th')] as HTMLElement[]
+      let total = 0
+      ths.forEach((th, i) => {
+        const w = th.getBoundingClientRect().width
+        total += w
+        if (floatCols[i]) floatCols[i].style.width = w + 'px'
+      })
+      floatTable.style.width = total + 'px'
+    }
+
+    let raf = 0
+    const update = () => {
+      raf = 0
+      if (!isMobile()) { floatEl.style.display = 'none'; return }
+      const pin = head.getBoundingClientRect().bottom      // bottom of the sticky page header
+      const tRect = table.getBoundingClientRect()
+      const hH = thead.getBoundingClientRect().height
+      // show once the real header has scrolled above the pin line, until the table
+      // itself scrolls (nearly) out of view above it
+      const show = tRect.top < pin && tRect.bottom > pin + hH
+      if (!show) { floatEl.style.display = 'none'; return }
+      const sRect = scroller.getBoundingClientRect()
+      syncWidths()
+      floatEl.style.display = 'block'
+      floatEl.style.top = (window.scrollY + pin) + 'px'     // absolute vs .dash → tracks viewport pin
+      floatEl.style.left = sRect.left + 'px'
+      floatEl.style.width = sRect.width + 'px'
+      floatTable.style.transform = 'translateX(' + (-scroller.scrollLeft) + 'px)'
+    }
+    const schedule = () => { if (!raf) raf = requestAnimationFrame(update) }
+
+    update()
+    window.addEventListener('scroll', schedule, { passive: true })
+    window.addEventListener('resize', schedule, { passive: true })
+    scroller.addEventListener('scroll', schedule, { passive: true })
+    const ro = new ResizeObserver(schedule)
+    ro.observe(table)
+    ro.observe(scroller)
+    return () => {
+      window.removeEventListener('scroll', schedule)
+      window.removeEventListener('resize', schedule)
+      scroller.removeEventListener('scroll', schedule)
+      ro.disconnect()
+      if (raf) cancelAnimationFrame(raf)
+    }
+  }, [])
+
+  return (
+    <>
+      <div className="table-card">
+        <div className="table-head-bar">
+          <h2 className="table-title">Campaign breakdown</h2>
+          {anySelected ? (
+            <span className="table-scope">
+              <span className="scope-dot" />
+              {scopeCount} row{scopeCount === 1 ? '' : 's'} on chart
+              <button className="scope-clear" onClick={onClearScope}>Clear</button>
+            </span>
+          ) : (
+            <span className="table-hint">Tick a row to plot only it on the chart</span>
+          )}
+        </div>
+        <div className="table-scroll" ref={scrollRef}>
+          <table className="summary-table" ref={tableRef}>
+            <thead ref={theadRef}>
+              {headRow()}
+            </thead>
+            <tbody>
+              {sorted.map((node, i) => (
+                <TableRow
+                  key={i}
+                  node={node}
+                  depth={0}
+                  label={node.campaign}
+                  expanded={expanded}
+                  onToggle={toggle}
+                  path={String(i)}
+                  rowKey={node.campaign}
+                  parentKeys={[]}
+                  selectedKeys={selectedKeys}
+                  onToggleKey={onToggleKey}
+                  anySelected={anySelected}
+                />
               ))}
-            </tr>
-          </thead>
-          <tbody>
-            {sorted.map((node, i) => (
-              <TableRow
-                key={i}
-                node={node}
-                depth={0}
-                label={node.campaign}
-                expanded={expanded}
-                onToggle={toggle}
-                path={String(i)}
-                rowKey={node.campaign}
-                parentKeys={[]}
-                selectedKeys={selectedKeys}
-                onToggleKey={onToggleKey}
-                anySelected={anySelected}
-              />
-            ))}
-          </tbody>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Floating pinned header clone (mobile only, shown/positioned via the effect above) */}
+      <div className="floating-thead" ref={floatRef} aria-hidden="true">
+        <table className="summary-table">
+          <colgroup>{COLDEFS.map((c) => <col key={c.key} />)}</colgroup>
+          <thead>{headRow()}</thead>
         </table>
       </div>
-    </div>
+    </>
   )
 }

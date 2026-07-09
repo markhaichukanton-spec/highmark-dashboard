@@ -266,6 +266,16 @@ tr.tr-dim .row-check { opacity: .5; }
 /* shadow under table column header once it has pinned */
 .dash:has(.topbar.swap) .summary-table thead th { box-shadow: 0 10px 22px -16px rgba(20,18,30,.4); }
 
+/* ── FLOATING PINNED TABLE HEADER (mobile) ──
+   A JS-positioned clone of the header. On mobile the table scrolls horizontally,
+   and a horizontal-scroll container clips vertical position:sticky, so the real
+   thead can't pin. The clone is absolutely positioned relative to .dash and driven
+   by SummaryTable's scroll effect (top = scrollY + header bottom, translateX synced
+   to the table's scrollLeft). Hidden by default; the effect toggles display. */
+.floating-thead { display: none; position: absolute; left: 0; top: 0; z-index: 25; overflow: hidden; pointer-events: auto; }
+.floating-thead table { table-layout: fixed; border-collapse: collapse; margin: 0; }
+.floating-thead thead th { box-shadow: 0 10px 22px -16px rgba(20,18,30,.4); }
+
 /* ── FIT-TO-SCREEN: chart sticky-pinned in its stage (desktop ≥1025) ── */
 @container dash (min-width: 1025px) {
   /* chart-stage is taller than the viewport by --stage-room, giving scroll distance
