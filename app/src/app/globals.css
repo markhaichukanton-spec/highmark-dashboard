@@ -334,6 +334,12 @@ tr.tr-dim .row-check { opacity: .5; }
   .head-right .daterange { flex: 1 1 auto; justify-content: center; }
   .head-right .dd { flex: 1 1 140px; }
   .head-right .dd-field, .head-right .dd-field select { width: 100%; }
+  /* date-picker popup: anchor to the left edge (right:0 pushed it off-screen) and
+     clamp to the viewport; stack From/To/Apply so the wide native date inputs fit */
+  .drp-pop { left: 0; right: auto; width: min(300px, calc(100vw - 24px)); }
+  .drp-custom { flex-wrap: wrap; }
+  .drp-field { flex: 1 1 100%; }
+  .drp-apply { flex: 1 1 100%; }
   .kpi-block-head { flex-direction: column; align-items: flex-start; gap: 3px; }
   .kpi-hint { display: none; }
   .chart-head { flex-wrap: wrap; }
