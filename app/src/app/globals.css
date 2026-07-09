@@ -222,6 +222,9 @@ th.sortable:hover .sort-ind { opacity: .4; }
 .sort-ind.on.asc { transform: rotate(180deg); }
 .summary-table tbody td { padding: 11px 9px; border-bottom: 1px solid var(--line); white-space: nowrap; }
 .summary-table tbody tr:last-child td { border-bottom: 0; }
+/* subtle vertical separators between value columns so adjacent numbers don't blend —
+   lighter than the row lines, so rows stay the dominant structure (no outer frame) */
+.summary-table th.th-right, .summary-table td.tcell-num { border-left: 1px solid rgba(20, 18, 30, 0.06); }
 .tcell-name { text-align: left; white-space: normal; min-width: 160px; }
 .tcell-num { text-align: right; font-family: var(--mono); font-size: 12px; color: var(--ink); font-variant-numeric: tabular-nums; }
 .name-txt { vertical-align: middle; white-space: normal; overflow-wrap: anywhere; font-family: var(--sans); }
