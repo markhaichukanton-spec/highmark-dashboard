@@ -267,14 +267,19 @@ tr.tr-dim .row-check { opacity: .5; }
 .dash:has(.topbar.swap) .summary-table thead th { box-shadow: 0 10px 22px -16px rgba(20,18,30,.4); }
 
 /* ── FLOATING PINNED TABLE HEADER (mobile) ──
-   A JS-positioned clone of the header. On mobile the table scrolls horizontally,
-   and a horizontal-scroll container clips vertical position:sticky, so the real
-   thead can't pin. The clone is absolutely positioned relative to .dash and driven
-   by SummaryTable's scroll effect (top = scrollY + header bottom, translateX synced
-   to the table's scrollLeft). Hidden by default; the effect toggles display. */
-.floating-thead { display: none; position: absolute; left: 0; top: 0; z-index: 25; overflow: hidden; pointer-events: auto; }
+   A clone of the header rendered in a body portal. On mobile the table scrolls
+   horizontally, and a horizontal-scroll container clips vertical position:sticky, so
+   the real thead can't pin. The clone is position:FIXED (browser pins it vertically on
+   the compositor → smooth, no jitter); SummaryTable's effect only sets its geometry on
+   show/resize and mirrors the table's horizontal scroll via translateX. Hidden by default. */
+.floating-thead { display: none; position: fixed; left: 0; top: 0; z-index: 25; overflow: hidden; pointer-events: auto; }
 .floating-thead table { table-layout: fixed; border-collapse: collapse; margin: 0; }
+.floating-thead thead { position: static; }   /* neutralize the base .summary-table thead sticky */
 .floating-thead thead th { box-shadow: 0 10px 22px -16px rgba(20,18,30,.4); }
+/* the clone lives in a body portal, so @container dash rules don't reach it —
+   mirror the real header's responsive padding/size with viewport media queries */
+@media (max-width: 1180px) { .floating-thead thead th { padding-left: 6px; padding-right: 6px; font-size: 9px; letter-spacing: .08em; } }
+@media (max-width: 720px)  { .floating-thead thead th { padding-left: 4px; padding-right: 4px; } }
 
 /* ── FIT-TO-SCREEN: chart sticky-pinned in its stage (desktop ≥1025) ── */
 @container dash (min-width: 1025px) {

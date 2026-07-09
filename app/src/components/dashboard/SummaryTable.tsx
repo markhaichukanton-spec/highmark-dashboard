@@ -1,5 +1,6 @@
 'use client'
 import { useState, useMemo, useCallback, useRef, useEffect, Fragment } from 'react'
+import { createPortal } from 'react-dom'
 import { fmt, COLORS } from '@/lib/dashboard-config'
 import { SEP } from '@/lib/dashboard-client'
 import type { TreeNode } from '@/lib/dashboard-client'
@@ -171,17 +172,21 @@ export function SummaryTable({ rows, selectedKeys, onToggleKey, onClearScope }: 
 
   // ── Floating pinned header (mobile) ──────────────────────────────────────
   // The table scrolls horizontally (12 columns), and a horizontal-scroll container
-  // clips vertical position:sticky — so the real thead can't stick on mobile. Instead
-  // we clone the header into a bar that tracks the sticky page header's bottom edge
-  // and mirrors the table's horizontal scroll. Positioned ABSOLUTE relative to `.dash`
-  // (whose container-type makes it the containing block) with top = scrollY + pin, so
-  // it behaves like fixed while still inheriting the container-query header styles.
+  // clips vertical position:sticky — so the real thead can't stick on mobile. We clone
+  // the header into a position:FIXED bar so the browser pins it vertically on the
+  // compositor (smooth, no per-frame JS = no jitter). Because `.dash` has container-type
+  // (which makes it the containing block for fixed descendants), the clone is rendered
+  // in a body PORTAL so `fixed` resolves against the viewport. JS only sets the static
+  // geometry on show/resize and mirrors the table's horizontal scroll (translateX).
   const scrollRef = useRef<HTMLDivElement>(null)
   const tableRef = useRef<HTMLTableElement>(null)
   const theadRef = useRef<HTMLTableSectionElement>(null)
   const floatRef = useRef<HTMLDivElement>(null)
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
 
   useEffect(() => {
+    if (!mounted) return
     const dash = document.querySelector('.dash') as HTMLElement | null
     const head = document.querySelector('.dash-head') as HTMLElement | null
     const scroller = scrollRef.current
@@ -194,6 +199,8 @@ export function SummaryTable({ rows, selectedKeys, onToggleKey, onClearScope }: 
     if (!floatTable) return
 
     const isMobile = () => dash.getBoundingClientRect().width < 1025
+    let shown = false
+    let hraf = 0
 
     const syncWidths = () => {
       const ths = [...thead.querySelectorAll('th')] as HTMLElement[]
@@ -205,43 +212,53 @@ export function SummaryTable({ rows, selectedKeys, onToggleKey, onClearScope }: 
       })
       floatTable.style.width = total + 'px'
     }
+    const syncX = () => { floatTable.style.transform = 'translateX(' + (-scroller.scrollLeft) + 'px)' }
+    // static geometry — set only when the bar appears / on resize, never per scroll frame.
+    // `top` is viewport-relative (fixed), so the browser keeps it pinned as the page scrolls.
+    const place = () => {
+      syncWidths()
+      floatEl.style.top = head.getBoundingClientRect().bottom + 'px'
+      const sRect = scroller.getBoundingClientRect()
+      floatEl.style.left = sRect.left + 'px'
+      floatEl.style.width = sRect.width + 'px'
+      syncX()
+    }
 
     let raf = 0
     const update = () => {
       raf = 0
-      if (!isMobile()) { floatEl.style.display = 'none'; return }
-      const pin = head.getBoundingClientRect().bottom      // bottom of the sticky page header
+      if (!isMobile()) { if (shown) { floatEl.style.display = 'none'; shown = false } return }
+      const pin = head.getBoundingClientRect().bottom
       const tRect = table.getBoundingClientRect()
       const hH = thead.getBoundingClientRect().height
       // show once the real header has scrolled above the pin line, until the table
       // itself scrolls (nearly) out of view above it
       const show = tRect.top < pin && tRect.bottom > pin + hH
-      if (!show) { floatEl.style.display = 'none'; return }
-      const sRect = scroller.getBoundingClientRect()
-      syncWidths()
-      floatEl.style.display = 'block'
-      floatEl.style.top = (window.scrollY + pin) + 'px'     // absolute vs .dash → tracks viewport pin
-      floatEl.style.left = sRect.left + 'px'
-      floatEl.style.width = sRect.width + 'px'
-      floatTable.style.transform = 'translateX(' + (-scroller.scrollLeft) + 'px)'
+      if (show && !shown) { shown = true; floatEl.style.display = 'block'; place() }
+      else if (!show && shown) { shown = false; floatEl.style.display = 'none' }
     }
+    // vertical scroll: only the cheap show/hide check — while shown, no style writes,
+    // so the fixed bar stays pinned by the browser (no jitter)
     const schedule = () => { if (!raf) raf = requestAnimationFrame(update) }
+    const onHScroll = () => { if (shown && !hraf) hraf = requestAnimationFrame(() => { hraf = 0; syncX() }) }
+    const remeasure = () => { if (shown) place(); schedule() }
 
     update()
     window.addEventListener('scroll', schedule, { passive: true })
-    window.addEventListener('resize', schedule, { passive: true })
-    scroller.addEventListener('scroll', schedule, { passive: true })
-    const ro = new ResizeObserver(schedule)
+    window.addEventListener('resize', remeasure, { passive: true })
+    scroller.addEventListener('scroll', onHScroll, { passive: true })
+    const ro = new ResizeObserver(remeasure)
     ro.observe(table)
     ro.observe(scroller)
     return () => {
       window.removeEventListener('scroll', schedule)
-      window.removeEventListener('resize', schedule)
-      scroller.removeEventListener('scroll', schedule)
+      window.removeEventListener('resize', remeasure)
+      scroller.removeEventListener('scroll', onHScroll)
       ro.disconnect()
       if (raf) cancelAnimationFrame(raf)
+      if (hraf) cancelAnimationFrame(hraf)
     }
-  }, [])
+  }, [mounted])
 
   return (
     <>
@@ -285,13 +302,17 @@ export function SummaryTable({ rows, selectedKeys, onToggleKey, onClearScope }: 
         </div>
       </div>
 
-      {/* Floating pinned header clone (mobile only, shown/positioned via the effect above) */}
-      <div className="floating-thead" ref={floatRef} aria-hidden="true">
-        <table className="summary-table">
-          <colgroup>{COLDEFS.map((c) => <col key={c.key} />)}</colgroup>
-          <thead>{headRow()}</thead>
-        </table>
-      </div>
+      {/* Floating pinned header clone — body portal so position:fixed resolves against
+          the viewport (not the container-typed .dash). Shown/positioned via the effect. */}
+      {mounted && createPortal(
+        <div className="floating-thead" ref={floatRef} aria-hidden="true">
+          <table className="summary-table">
+            <colgroup>{COLDEFS.map((c) => <col key={c.key} />)}</colgroup>
+            <thead>{headRow()}</thead>
+          </table>
+        </div>,
+        document.body
+      )}
     </>
   )
 }
