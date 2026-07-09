@@ -174,9 +174,15 @@ export default function DashboardPage() {
 
     // measure --head-h (slim header) and --topbar-ch (compact topbar + head + body-pad)
     // and --kpi-bottom (where table thead should pin = bottom of KPI block)
+    // Desktop-only choreography (compaction, thead pinning, chart swap) lives below
+    // 1025px as CSS makes the topbar static and the thead static. Keep the JS off there
+    // too, so no inline compact styles bleed onto the mobile layout.
+    const isWide = () => dash.getBoundingClientRect().width >= 1025
+
     const measure = () => {
       const headH = Math.round(head.getBoundingClientRect().height)
       dash.style.setProperty('--head-h', headH + 'px')
+      if (!isWide()) { applyT(0); return }   // mobile: stay expanded, skip compact offsets
       // measure compact height without transitions
       dash.classList.add('no-anim')
       applyT(1)
@@ -197,6 +203,12 @@ export default function DashboardPage() {
     let compact = false
     const onScroll = () => {
       const y = window.scrollY || document.documentElement.scrollTop || 0
+      if (!isWide()) {
+        // mobile: no compaction/swap — keep the bar expanded and static
+        if (compact) { compact = false; applyT(0); tCurrent = 0 }
+        topbar.classList.remove('stuck', 'swap')
+        return
+      }
       // hysteresis: expand requires scrolling back past 12px, compact triggers at 40px
       const next = compact ? y > 12 : y > 40
       if (next !== compact) { compact = next; tweenTo(compact ? 1 : 0) }

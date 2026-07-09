@@ -304,6 +304,9 @@ tr.tr-dim .row-check { opacity: .5; }
   .filter-bar { padding: 14px 22px; }
   .dash-body { padding: 22px 22px 44px; }
   .kpi-row { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+  /* narrow tiles can't fit label + value on one row (they overlap) → stack them */
+  .kpi { flex-direction: column; align-items: flex-start; gap: 5px; }
+  .kpi-right { width: 100%; justify-content: space-between; }
   .analytics-grid { grid-template-columns: 1fr; }
   .pie-card { display: grid; column-gap: 28px; align-items: center; grid-template-columns: minmax(0, 300px) 1fr; grid-template-areas: "head head" "seg seg" "body legend"; }
   .pie-head { grid-area: head; }
@@ -313,9 +316,19 @@ tr.tr-dim .row-check { opacity: .5; }
   .topbar { position: static; }
   .fb-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; align-items: end; }
   .fb-fields .dd { flex: initial; min-width: 0; }
+  /* topbar no longer pins here, so the table header must not float at --kpi-bottom.
+     Static thead = column labels scroll with the table (no mid-screen overlap). */
+  .summary-table thead { position: static; }
+  /* 12 columns can't fit a phone — scroll the table horizontally instead of clipping it */
+  .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .summary-table { min-width: 720px; }
 }
 
 @container dash (max-width: 720px) {
+  /* stack the filter bar: FILTERS label on top, fields full-width, reset below —
+     the flex row overlaps at phone widths */
+  .filter-bar { flex-direction: column; align-items: stretch; }
+  .fb-reset { width: 100%; }
   .dash-head { flex-wrap: wrap; gap: 14px; }
   .head-right { width: 100%; flex-wrap: wrap; gap: 10px; }
   .head-right .daterange { flex: 1 1 auto; justify-content: center; }
