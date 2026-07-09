@@ -16,6 +16,7 @@ const COLDEFS = [
   { key: 'cpm',         label: 'CPM',    align: 'right', sortable: true, fmt: (v: number) => fmt.currency(v) },
   { key: 'clicks',      label: 'Clicks', align: 'right', sortable: true, fmt: (v: number) => fmt.number(v) },
   { key: 'impressions', label: 'Impr.',  align: 'right', sortable: true, fmt: (v: number) => fmt.compact(v) },
+  { key: 'ctr',         label: 'CTR',    align: 'right', sortable: true, fmt: (v: number) => fmt.percent(v) },
 ] as const
 
 function roasStyle(roas: number): React.CSSProperties {
