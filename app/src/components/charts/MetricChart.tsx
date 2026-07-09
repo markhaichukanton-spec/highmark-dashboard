@@ -1,4 +1,5 @@
 'use client'
+import { useRef, useState, useEffect, useMemo } from 'react'
 import {
   ResponsiveContainer, ComposedChart, Bar, Line, XAxis, YAxis,
   CartesianGrid, Tooltip, LabelList,
@@ -45,6 +46,33 @@ export function MetricChart({ data, selected, metas, scope }: Props) {
   const left = ordered.filter((m) => m.axis === 'left')
   const right = ordered.filter((m) => m.axis === 'right')
 
+  // Explicit, evenly-stepped date ticks anchored to the LAST date and stepping
+  // backward. Every gap equals the step, so there's never a "missing tooth" seam
+  // (which Recharts' preserveStart/End auto-thinning leaves when the step doesn't
+  // divide the range). The step adapts to the plot width (fewer labels when narrow).
+  const bodyRef = useRef<HTMLDivElement>(null)
+  const [chartW, setChartW] = useState(0)
+  useEffect(() => {
+    const el = bodyRef.current
+    if (!el) return
+    const ro = new ResizeObserver(() => setChartW(el.clientWidth))
+    ro.observe(el)
+    setChartW(el.clientWidth)
+    return () => ro.disconnect()
+  }, [])
+
+  const xTicks = useMemo(() => {
+    const n = data.length
+    if (n === 0) return [] as string[]
+    const plot = Math.max(0, chartW - 92)          // minus the Y-axis gutters
+    const perLabel = chartW < 560 ? 44 : 60        // tighter on phones so it's not too sparse
+    const maxLabels = Math.max(2, Math.floor(plot / perLabel))
+    const step = Math.max(1, Math.ceil((n - 1) / (maxLabels - 1)))
+    const out: string[] = []
+    for (let i = n - 1; i >= 0; i -= step) out.unshift(data[i].label)
+    return out
+  }, [data, chartW])
+
   return (
     <div className="chart-card">
       <div className="chart-head">
@@ -63,7 +91,7 @@ export function MetricChart({ data, selected, metas, scope }: Props) {
           ))}
         </div>
       </div>
-      <div className="chart-body">
+      <div className="chart-body" ref={bodyRef}>
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart
             data={data}
@@ -78,6 +106,10 @@ export function MetricChart({ data, selected, metas, scope }: Props) {
               tickLine={false}
               axisLine={{ stroke: 'rgba(20,18,30,0.14)' }}
               dy={6}
+              // explicit, evenly-stepped ticks (computed above) — anchored to the last
+              // date, no "missing tooth" seam. interval=0 shows exactly these.
+              ticks={xTicks}
+              interval={0}
             />
             {left.length > 0 && (
               <YAxis
